@@ -1,0 +1,36 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Public read access to washers
+    match /mep_washer/{document=**} {
+      allow read: if true;
+    }
+
+    // Public read access to dryers
+    match /mep_dryers/{document=**} {
+      allow read: if true;
+    }
+
+    // Public read access to ironers
+    match /mep_ironers/{document=**} {
+      allow read: if true;
+    }
+
+    // Writes only allowed for authenticated users
+    match /{document=**} {
+      allow write: if request.auth != null;
+    }
+    // User can only access their own document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Admin can access all users
+    match /users/{userId} {
+      allow read, write: if request.auth != null 
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+    }
+  }
+}

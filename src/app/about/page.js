@@ -1,11 +1,9 @@
 import React from 'react'
 
-function MEPTable() {
+export default function page() {
   return (
     <div>
-      
+      hello world
     </div>
   )
 }
-
-export default MEPTable

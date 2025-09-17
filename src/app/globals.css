@@ -5,14 +5,7 @@
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: white) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
@@ -24,3 +17,67 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes gradientMove {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradientMove 10s ease infinite;
+}
+
+
+
+
+.bg-water {
+  background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.25) 0%, transparent 40%),
+              radial-gradient(circle at 80% 30%, rgba(0, 0, 0, 0.2) 0%, transparent 50%),
+              radial-gradient(circle at 50% 80%, rgba(255, 255, 255, 0.15) 0%, transparent 45%),
+              linear-gradient(135deg, #1a2a6c, #29c6b0, #fdbb2d);
+  background-size: 200% 200%;
+  background-blend-mode: overlay;
+}
+
+@keyframes ripples {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-ripples {
+  animation: ripples 12s ease-in-out infinite;
+}
+
+@keyframes bubble {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-50vh) scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-100vh) scale(0.8);
+    opacity: 0;
+  }
+}
+
+.animate-bubble {
+  animation-name: bubble;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
