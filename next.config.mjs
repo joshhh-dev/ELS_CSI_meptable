@@ -2,6 +2,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     reactStrictMode: true,
+    distDir: ".next", // ensures Firebase Cloud Functions can find it
+
   images: {
     remotePatterns: [
       {
