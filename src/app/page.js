@@ -72,12 +72,6 @@ export default function HomePage() {
               ) : (
                 <>
                   <Link
-                    href="/register"
-                    className="px-6 py-3 bg-white text-blue-700 rounded-lg font-semibold shadow hover:-translate-y-2 transition transform hover:-translate-y-1"
-                  >
-                    Get Started
-                  </Link>
-                  <Link
                     href="/login"
                     className="px-6 py-3 bg-green-500 text-900 rounded-lg font-semibold shadow hover:-translate-y-2 transition transform hover:-translate-y-1"
                   >

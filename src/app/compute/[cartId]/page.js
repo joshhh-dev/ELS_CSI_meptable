@@ -39,7 +39,9 @@ export default function CartDetailPage() {
   //toggle state: "Usage" or "currency"
   const [viewMode, setViewMode] = useState("usage");
 
-  
+  const soon = () => {
+      router.replace("../../about");
+  }
 
   // Real-time fetch from Firebase
   useEffect(() => {
@@ -203,6 +205,163 @@ export default function CartDetailPage() {
     }
   };
 
+
+// XLSX export: single sheet, columns per machine + Total column
+const exportToXLSX = async () => {
+  try {
+    const XLSX = await import("xlsx");
+
+    const machines = (items || []).map((m, i) => ({
+      name: (m.model || m.category || `Machine ${i + 1}`).toString(),
+      totalLoad: Number(parseFloat(m.totalLoad || 0)),
+      gasBTU: Number(parseFloat(m.gasBTU || 0)),
+      coldLiters: Number(parseFloat(m?.coldWater?.waterConsump || 0)),
+      hotLiters: Number(parseFloat(m?.hotWater?.waterConsump || 0)),
+      exhaustM3h: Number(parseFloat(m?.exhaust?.volume || 0)),
+    }));
+
+    // ✅ Merge duplicates
+    const machineMap = {};
+    machines.forEach((m) => {
+      if (!machineMap[m.name]) {
+        machineMap[m.name] = { ...m };
+      } else {
+        machineMap[m.name].totalLoad += m.totalLoad;
+        machineMap[m.name].gasBTU += m.gasBTU;
+        machineMap[m.name].coldLiters += m.coldLiters;
+        machineMap[m.name].hotLiters += m.hotLiters;
+        machineMap[m.name].exhaustM3h += m.exhaustM3h;
+      }
+    });
+    const merged = Object.values(machineMap);
+
+    // ✅ Use merged machines everywhere
+    const header = ["Type", ...merged.map((m) => m.name), "Total Consumption"];
+    const modelRow = ["Model", ...merged.map((m) => m.name), ""];
+
+    const sum = (arr) =>
+      arr.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+
+    const rowElectricity = [
+      "Average Consumption (kW)",
+      ...merged.map((m) => m.totalLoad),
+      sum(merged.map((m) => m.totalLoad)),
+    ];
+
+    const rowGas = [
+      "Gas BTU Consumption (BTU/h)",
+      ...merged.map((m) => m.gasBTU),
+      sum(merged.map((m) => m.gasBTU)),
+    ];
+
+    const rowColdWater = [
+      "Water Consumption (Liters)",
+      ...merged.map((m) => m.coldLiters),
+      sum(merged.map((m) => m.coldLiters)),
+    ];
+
+    const rowHotWater = [
+      "Water Consumption (Liters)",
+      ...merged.map((m) => m.hotLiters),
+      sum(merged.map((m) => m.hotLiters)),
+    ];
+
+    const rowExhaust = [
+      "Volume (m³/h)",
+      ...merged.map((m) => m.exhaustM3h),
+      sum(merged.map((m) => m.exhaustM3h)),
+    ];
+
+    const aoa = [
+      header,
+      modelRow,
+      [],
+      ["ELECTRICITY"],
+      rowElectricity,
+      [],
+      ["GAS"],
+      rowGas,
+      [],
+      ["COLD WATER"],
+      rowColdWater,
+      [],
+      ["HOT WATER"],
+      rowHotWater,
+      [],
+      ["EXHAUST"],
+      rowExhaust,
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const colCount = header.length;
+    ws["!cols"] = Array.from({ length: colCount }, (_, i) => ({
+      wch: i === 0 ? 30 : 20,
+    }));
+
+    const setCell = (addr, s) => {
+      if (ws[addr]) ws[addr].s = { ...(ws[addr].s || {}), ...s };
+    };
+    const address = (r, c) => XLSX.utils.encode_cell({ r, c });
+
+    const border = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
+    const blueHdr = {
+      font: { bold: true },
+      alignment: { horizontal: "center" },
+      fill: { fgColor: { rgb: "D9E1F2" } },
+      border,
+    };
+    const sectionBlue = {
+      fill: { fgColor: { rgb: "DAEEF3" } },
+      font: { bold: true },
+      border,
+    };
+    const yellowRow = { fill: { fgColor: { rgb: "FFF2CC" } }, border };
+    const redTotal = { font: { bold: true, color: { rgb: "C00000" } } };
+
+    // Header styling
+    for (let c = 0; c < colCount; c++) setCell(address(0, c), blueHdr);
+    for (let c = 0; c < colCount; c++)
+      setCell(address(1, c), { font: { bold: true }, border });
+
+    // Section titles rows
+    const secRows = [3, 6, 9, 12, 15];
+    secRows.forEach((r) => {
+      for (let c = 0; c < colCount; c++) setCell(address(r, c), sectionBlue);
+      ws["!merges"] = ws["!merges"] || [];
+      ws["!merges"].push({ s: { r, c: 0 }, e: { r, c: colCount - 1 } });
+    });
+
+    // Metric rows (immediately after each section)
+    const metricRows = [4, 7, 10, 13, 16];
+    metricRows.forEach((r) => {
+      for (let c = 0; c < colCount; c++) setCell(address(r, c), yellowRow);
+      setCell(address(r, colCount - 1), redTotal);
+    });
+
+    // Borders for all existing cells
+    for (let r = 0; r < aoa.length; r++) {
+      for (let c = 0; c < colCount; c++) {
+        const a = address(r, c);
+        if (ws[a]) setCell(a, { border });
+      }
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Consumption");
+    XLSX.writeFile(wb, `cart-${cartId}.xlsx`);
+    toast.success("📗 Exported (.xlsx) with machines as columns");
+  } catch (e) {
+    console.error(e);
+    toast.error("Failed to export XLSX");
+  }
+};
+
+
   if (!user) return <div className="p-6 animate-pulse space-y-4">
     <div className="h-8 w-1/3 bg-gray-300 rounded"></div>
     <div className="h-6 w-1/2 bg-gray-300 rounded"></div>
@@ -276,6 +435,13 @@ const COLORS = {
                 ${loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
             >
               {loading ? "Saving..." : "Save Cart"}
+            </button>
+
+            <button
+              onClick={soon}
+              className="flex items-center justify-center gap-2 rounded-md px-6 py-2 bg-green-700 text-white shadow hover:bg-green-800 transition duration-300"
+            >
+              Export to Excel (.xlsx)
             </button>
             <button
               onClick={() => router.push("/compute")}
