@@ -121,7 +121,7 @@ export default function WasherMachinePage() {
                     <td className="border p-2 text-center">{machine?.hotWater?.diameter || "-"}</td>
                   </tr>
                   <tr>
-                    <td className="border p-2 font-semibold">Water Consumption</td>
+                    <td className="border p-2 font-semibold">Water Consumption(L)</td>
                     <td className="border p-2 text-center">{machine?.coldWater?.waterConsump || "-"}</td>
                     <td className="border p-2 text-center">{machine?.hotWater?.waterConsump || "-"}</td>
                   </tr>
