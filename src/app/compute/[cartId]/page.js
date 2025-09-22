@@ -354,7 +354,7 @@ const exportToXLSX = async () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Consumption");
     XLSX.writeFile(wb, `cart-${cartId}.xlsx`);
-    toast.success("📗 Exported (.xlsx) with machines as columns");
+    toast.success("Exported (.xlsx) with machines as columns");
   } catch (e) {
     console.error(e);
     toast.error("Failed to export XLSX");
