@@ -196,7 +196,7 @@ export default function CartDetailPage() {
     try {
       const dbRef = ref(rtdb, `carts/${user.uid}/${cartId}`);
       await set(dbRef, { ...cart, items, totals, hour, categoryRates });
-      toast.success("✅ Cart saved successfully!");
+      toast.success("Cart saved successfully!");
     } catch (error) {
       console.error("Error saving cart:", error);
       toast.error("❌ Failed to save cart. Try again.");
