@@ -199,7 +199,7 @@ export default function CartDetailPage() {
       toast.success("Cart saved successfully!");
     } catch (error) {
       console.error("Error saving cart:", error);
-      toast.error("❌ Failed to save cart. Try again.");
+      toast.error("Failed to save cart. Try again.");
     } finally {
       setLoading(false);
     }
