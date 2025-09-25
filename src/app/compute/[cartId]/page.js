@@ -10,6 +10,7 @@ import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis
 } from "recharts";
+import { m } from "framer-motion";
 
 // Currency formatter
 const formatCurrency = (value) =>
@@ -206,160 +207,250 @@ export default function CartDetailPage() {
   };
 
 
+    const pickSupplyHeight = (m) => {
+    if (["TUMBLE DRYER", "IRONERS"].includes(m.category)) {
+      return m.gasSupplyHeight ?? "-";
+    }
+    return m.supplyHeight ?? "-";
+  };
+
+    const getGasConnectionHeight = (m) => {
+      if (["IRONERS", "TUMBLE DRYER"].includes(m.category)) {
+        return m.gasConnectionHeight ?? m.connectionHeight ?? "-";
+      }
+    };
+
+
+const getConnectionHeight = (m) => {
+  if (m.category === "IRONERS") {
+    return m.current ?? "-";
+  }
+  return m.connectionHeight ?? "-";
+};
+
+// Expand machines by quantity
+const expandedMachines = [];
+(items || []).forEach((m, i) => {
+  const qty = Number(m.quantity || 1); // assume you store machine quantity here
+  for (let q = 0; q < qty; q++) {
+    expandedMachines.push({
+      ...m,
+      name: `${m.model || `Machine ${i + 1}`} ${qty > 1 ? `(Unit ${q + 1})` : ""}`,
+    });
+  }
+});
+
+
+
 // XLSX export: single sheet, columns per machine + Total column
 const exportToXLSX = async () => {
   try {
     const XLSX = await import("xlsx");
-
-    const machines = (items || []).map((m, i) => ({
-      name: (m.model || m.category || `Machine ${i + 1}`).toString(),
-      totalLoad: Number(parseFloat(m.totalLoad || 0)),
-      gasBTU: Number(parseFloat(m.gasBTU || 0)),
-      coldLiters: Number(parseFloat(m?.coldWater?.waterConsump || 0)),
-      hotLiters: Number(parseFloat(m?.hotWater?.waterConsump || 0)),
-      exhaustM3h: Number(parseFloat(m?.exhaust?.volume || 0)),
-    }));
-
-    // ✅ Merge duplicates
-    const machineMap = {};
-    machines.forEach((m) => {
-      if (!machineMap[m.name]) {
-        machineMap[m.name] = { ...m };
-      } else {
-        machineMap[m.name].totalLoad += m.totalLoad;
-        machineMap[m.name].gasBTU += m.gasBTU;
-        machineMap[m.name].coldLiters += m.coldLiters;
-        machineMap[m.name].hotLiters += m.hotLiters;
-        machineMap[m.name].exhaustM3h += m.exhaustM3h;
+    
+   // ✅ Expand machines by quantity
+    const expandedMachines = [];
+    (items || []).forEach((m, i) => {
+      const qty = Number(m.quantity || 1);
+      for (let q = 0; q < qty; q++) {
+        expandedMachines.push({
+          ...m,
+          name: `${m.model || `Machine ${i + 1}`} ${qty > 1 ? `(Unit ${q + 1})` : ""}`,
+        });
       }
     });
-    const merged = Object.values(machineMap);
+    
+    // ✅ Build machine objects
+    const machines = expandedMachines.map((m, i) => ({
+      name: (m.model || `Machine ${i + 1}`).toString(),
+      category: (m.category || "Unknown").toString(),
+      heatSource: (m.heatSource || "-").toString(),
+      totalLoad: Number(m.totalLoad || 0),
+      gasBTU: Number(m.gasBTU || 0),
+      coldLiters: Number(m?.coldWater?.waterConsump || 0),
+      hotLiters: Number(m?.hotWater?.waterConsump || 0),
+      exhaustM3h: Number(m.volumeFlow || 0),
+      weight: Number(m.weight || 0),
+      height: Number(m.height || 0),
+      width: Number(m.width || 0),
+      depth: Number(m.depth || 0),
+      voltage: m.voltage || "-",
+      recommendedFuse: m.recommendedFuse || "-",
+      connectionHeight: getConnectionHeight(m),
+      supplyWaterHeight: m.supplyWaterHeight || "-",
+      supplyHeight: pickSupplyHeight(m) ?? m.supplyHeight,
+      connectionType: m.connectionType || "-",
+      gasLoad: Number(m.gasLoad || 0),
+      diameter: m.diameter ?? m.diameterFlow ?? "-",
+      gasPressure: m.gasPressure || "-",
+      gasType: m.gasType || "-",
 
-    // ✅ Use merged machines everywhere
-    const header = ["Type", ...merged.map((m) => m.name), "Total Consumption"];
-    const modelRow = ["Model", ...merged.map((m) => m.name), ""];
+      gasConnectionHeight: getGasConnectionHeight(m),
 
+      gasSupplyHeight: m.gasSupplyHeight || "-",
+      coldWater: m.coldWater || {},
+      hotWater: m.hotWater || {},
+      drain: m.drain || {},
+      pressureDrop: m.pressureDrop || "-",
+    }));
+
+    // // Merge duplicates by name
+    // const machineMap = {};
+    // machines.forEach((m) => {
+    //   if (!machineMap[m.name]) {
+    //     machineMap[m.name] = { ...m };
+    //     machineMap[m.category] = { ...m };
+    //   } else {
+    //     machineMap[m.name].totalLoad += m.totalLoad;
+    //     machineMap[m.name].gasBTU += m.gasBTU;
+    //     machineMap[m.name].coldLiters += m.coldLiters;
+    //     machineMap[m.name].hotLiters += m.hotLiters;
+    //     machineMap[m.name].exhaustM3h += m.exhaustM3h;
+    //     machineMap[m.name].weight += m.weight;
+    //     machineMap[m.name].height += m.height;
+    //     machineMap[m.name].width += m.width;
+    //     machineMap[m.name].depth += m.depth;
+    //     machineMap[m.name].gasLoad += m.gasLoad;
+    //   }
+    // });
+    // const merged = Object.values(machineMap);
+
+    // ✅ Utility
     const sum = (arr) =>
       arr.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
 
-    const rowElectricity = [
-      "Average Consumption (kW)",
-      ...merged.map((m) => m.totalLoad),
-      sum(merged.map((m) => m.totalLoad)),
+    // ✅ Section + row configs
+    const sections = [
+      {
+        title: "DIMENSIONS",
+        rows: [
+          { label: "Weight (kg)", key: "weight", sum: false },
+          { label: "Height (cm)", key: "height", sum: false },
+          { label: "Width (cm)", key: "width", sum: false },
+          { label: "Depth (cm)", key: "depth", sum: false },
+        ],
+      },
+      {
+        title: "ELECTRICITY",
+        rows: [
+          { label: "Voltage/Frequency/Phase", key: "voltage", sum: false },
+          { label: "Fuse (Amps)", key: "recommendedFuse", sum: false },
+          { label: "Height of Connection (mm)", key: "connectionHeight", sum: false },
+          { label: "Suggested Supply Height (cm)", key: "supplyHeight", sum: false },
+          { label: "Type of Connection", key: "connectionType", sum: false },
+          { label: "Average Consumption (kW)", key: "totalLoad", sum: true },
+        ],
+      },
+      {
+        title: "GAS",
+        rows: [
+          { label: "Diameter", key: "diameter", sum: false },
+          { label: "Gas Pressure (mbar)", key: "gasPressure", sum: false },
+          { label: "Type of Gas", key: "gasType", sum: false },
+          { label: "Height of Connection (mm)", key: "gasConnectionHeight", sum: false },
+          { label: "Suggested Supply Height (cm)", key: "gasSupplyHeight", sum: false },
+          { label: "Gas BTU Consumption (BTU/h)", key: "gasBTU", sum: true },
+          { label: "Gas Load (kW)", key: "gasLoad", sum: true },
+        ],
+      },
+      {
+        title: "COLD WATER",
+        rows: [
+          { label: "Diameter", key: "coldWater.diameter", sum: false },
+          { label: "Height of Connection (mm)", key: "coldWater.connectionHeight", sum: false },
+          { label: "Suggested Supply Height (cm)", key: "coldWater.supplyWaterHeight", sum: false },
+          { label: "Minimum Pressure (kpa)", key: "coldWater.minPressure", sum: false },
+          { label: "Maximum Pressure (kpa)", key: "coldWater.maxPressure", sum: false },
+          { label: "Water Consumption (Liters)", key: "coldLiters", sum: true },
+        ],
+      },
+      {
+        title: "HOT WATER",
+        rows: [
+          { label: "Diameter", key: "hotWater.diameter", sum: false },
+          { label: "Height of Connection (mm)", key: "hotWater.connectionHeight", sum: false },
+          { label: "Suggested Supply Height (cm)", key: "hotWater.supplyWaterHeight", sum: false },
+          { label: "Minimum Pressure (kpa)", key: "hotWater.minPressure", sum: false },
+          { label: "Maximum Pressure (kpa)", key: "hotWater.maxPressure", sum: false },
+          { label: "Water Consumption (Liters)", key: "hotLiters", sum: true },
+        ],
+      },
+      {
+        title: "DRAIN",
+        rows: [
+          { label: "Drain Connection Height (cm)", key: "drain.connectionHeight", sum: false },
+          { label: "Drain Diameter", key: "drain.diameter", sum: false },
+          { label: "Suggested Drain Height (cm)", key: "drain.supplyHeight", sum: false },
+        ],
+      },
+      {
+        title: "EXHAUST",
+        rows: [
+          { label: "Diameter", key: "diameter", sum: false },
+          { label: "Pressure Drop (Pa)", key: "pressureDrop", sum: false },
+          { label: "Volume (m³/h)", key: "exhaustM3h", sum: false },
+        ],
+      },
     ];
 
-    const rowGas = [
-      "Gas BTU Consumption (BTU/h)",
-      ...merged.map((m) => m.gasBTU),
-      sum(merged.map((m) => m.gasBTU)),
-    ];
+    // ✅ Header rows
+    const header = ["Type", ...machines.map((m) => m.category), "Total Consumption"];
+    const modelRow = ["Model", ...machines.map((m) => m.name), ""];
+    const heatRow = ["Heat Source", ...machines.map((m) => m.heatSource), ""];
 
-    const rowColdWater = [
-      "Water Consumption (Liters)",
-      ...merged.map((m) => m.coldLiters),
-      sum(merged.map((m) => m.coldLiters)),
-    ];
+    // ✅ Row builder
+    const getValue = (obj, path) =>
+      path.split(".").reduce((o, k) => (o ? o[k] : "-"), obj);
 
-    const rowHotWater = [
-      "Water Consumption (Liters)",
-      ...merged.map((m) => m.hotLiters),
-      sum(merged.map((m) => m.hotLiters)),
-    ];
+    const buildRow = ({ label, key, sum: doSum }) => {
+      const values = machines.map((m) => getValue(m, key) ?? "-");
+      const total = doSum
+        ? sum(values.map((v) => (typeof v === "number" ? v : parseFloat(v) || 0)))
+        : "";
+      return [label, ...values, total];
+    };
 
-    const rowExhaust = [
-      "Volume (m³/h)",
-      ...merged.map((m) => m.exhaustM3h),
-      sum(merged.map((m) => m.exhaustM3h)),
-    ];
+    // ✅ Assemble all rows
+    const aoa = [header, modelRow, heatRow, []];
+    sections.forEach((sec) => {
+      aoa.push([sec.title]);
+      sec.rows.forEach((row) => aoa.push(buildRow(row)));
+      aoa.push([]);
+    });
 
-    const aoa = [
-      header,
-      modelRow,
-      [],
-      ["ELECTRICITY"],
-      rowElectricity,
-      [],
-      ["GAS"],
-      rowGas,
-      [],
-      ["COLD WATER"],
-      rowColdWater,
-      [],
-      ["HOT WATER"],
-      rowHotWater,
-      [],
-      ["EXHAUST"],
-      rowExhaust,
-    ];
-
+    // ✅ Create sheet
     const ws = XLSX.utils.aoa_to_sheet(aoa);
     const colCount = header.length;
     ws["!cols"] = Array.from({ length: colCount }, (_, i) => ({
       wch: i === 0 ? 30 : 20,
     }));
 
-    const setCell = (addr, s) => {
-      if (ws[addr]) ws[addr].s = { ...(ws[addr].s || {}), ...s };
-    };
-    const address = (r, c) => XLSX.utils.encode_cell({ r, c });
-
-    const border = {
-      top: { style: "thin" },
-      bottom: { style: "thin" },
-      left: { style: "thin" },
-      right: { style: "thin" },
-    };
-    const blueHdr = {
-      font: { bold: true },
-      alignment: { horizontal: "center" },
-      fill: { fgColor: { rgb: "D9E1F2" } },
-      border,
-    };
-    const sectionBlue = {
-      fill: { fgColor: { rgb: "DAEEF3" } },
-      font: { bold: true },
-      border,
-    };
-    const yellowRow = { fill: { fgColor: { rgb: "FFF2CC" } }, border };
-    const redTotal = { font: { bold: true, color: { rgb: "C00000" } } };
-
-    // Header styling
-    for (let c = 0; c < colCount; c++) setCell(address(0, c), blueHdr);
-    for (let c = 0; c < colCount; c++)
-      setCell(address(1, c), { font: { bold: true }, border });
-
-    // Section titles rows
-    const secRows = [3, 6, 9, 12, 15];
-    secRows.forEach((r) => {
-      for (let c = 0; c < colCount; c++) setCell(address(r, c), sectionBlue);
-      ws["!merges"] = ws["!merges"] || [];
-      ws["!merges"].push({ s: { r, c: 0 }, e: { r, c: colCount - 1 } });
-    });
-
-    // Metric rows (immediately after each section)
-    const metricRows = [4, 7, 10, 13, 16];
-    metricRows.forEach((r) => {
-      for (let c = 0; c < colCount; c++) setCell(address(r, c), yellowRow);
-      setCell(address(r, colCount - 1), redTotal);
-    });
-
-    // Borders for all existing cells
-    for (let r = 0; r < aoa.length; r++) {
-      for (let c = 0; c < colCount; c++) {
-        const a = address(r, c);
-        if (ws[a]) setCell(a, { border });
-      }
-    }
+    // Styling (keep your existing cell styling logic here if needed)
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Consumption");
-    XLSX.writeFile(wb, `cart-${cartId}.xlsx`);
+  const now = new Date();
+  const pad = (n) => n.toString().padStart(2, "0");
+  const formattedDateTime = [
+    now.getFullYear(),
+    pad(now.getMonth() + 1), // month is 0-based
+    pad(now.getDate())
+  ].join("-") + "_" + [
+    pad(now.getHours()),
+    pad(now.getMinutes()),
+    pad(now.getSeconds())
+  ].join("-");
+
+  //eg: cart-2025-09-25_11-57-00.xlsx
+
+  XLSX.writeFile(wb, `MEP-${formattedDateTime}.xlsx`);
+
     toast.success("📗 Exported (.xlsx) with machines as columns");
   } catch (e) {
     console.error(e);
     toast.error("Failed to export XLSX");
   }
 };
+
 
 
   if (!user) return <div className="p-6 animate-pulse space-y-4">
@@ -438,7 +529,7 @@ const COLORS = {
             </button>
 
             <button
-              onClick={soon}
+              onClick={exportToXLSX}
               className="flex items-center justify-center gap-2 rounded-md px-6 py-2 bg-green-700 text-white shadow hover:bg-green-800 transition duration-300"
             >
               Export to Excel (.xlsx)

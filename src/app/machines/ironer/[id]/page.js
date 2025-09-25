@@ -1,13 +1,23 @@
 "use client";
-import React, { useEffect, useState } from "react";
+
+import { useState, useEffect } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { useParams } from "next/navigation";
+import { useCart } from "../../../context/CartContext";
 import { toast } from "react-toastify";
 import Image from "next/image";
-import { useCart } from "../../../context/CartContext";
+import { motion } from "framer-motion";
+import {
+  ArrowLeft,
+  ShoppingCart,
+  Flame,
+  Zap,
+  Wind,
+  Scale,
+} from "lucide-react";
 
-export default function IroneDetailPage() {
+export default function IronerMachinePage() {
   const { id } = useParams();
   const [machine, setMachine] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -17,15 +27,15 @@ export default function IroneDetailPage() {
     const loadMachine = async () => {
       try {
         const decodedId = decodeURIComponent(id);
-        const q = query(collection(db, "mep_ironers"), where("model", "==", decodedId));
-        const snap = await getDocs(q);
-        if (snap.empty) {
-          setMachine(null);
-        } else {
-          setMachine(snap.docs[0].data());
-        }
+        const ref = query(
+          collection(db, "mep_ironers"),
+          where("model", "==", decodedId)
+        );
+        const snap = await getDocs(ref);
+        if (!snap.empty) setMachine(snap.docs[0].data());
+        else setMachine(null);
       } catch (err) {
-        console.error(err);
+        console.error("Error loading ironer:", err);
         setMachine(null);
       } finally {
         setLoading(false);
@@ -34,128 +44,212 @@ export default function IroneDetailPage() {
     if (id) loadMachine();
   }, [id]);
 
+  const renderRow = (label, value) => (
+    <tr className="hover:bg-gray-50 transition">
+      <td className="px-3 py-2 font-medium text-gray-600 text-sm sm:text-base">
+        {label}
+      </td>
+      <td className="px-3 py-2 text-gray-800 text-center text-sm sm:text-base">
+        {value || <span className="text-gray-400">—</span>}
+      </td>
+    </tr>
+  );
+
   if (loading)
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <p className="text-lg font-semibold animate-pulse text-gray-600">
+        <motion.p
+          className="text-base sm:text-lg font-semibold text-gray-600"
+          animate={{ opacity: [0.3, 1, 0.3] }}
+          transition={{ repeat: Infinity, duration: 1.5 }}
+        >
           Loading ironer details...
-        </p>
+        </motion.p>
       </div>
     );
 
   if (!machine)
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <p className="text-lg text-red-500">Ironer not found</p>
+        <p className="text-base sm:text-lg text-red-500">Ironer not found</p>
       </div>
     );
 
-  const renderTableRow = (label, value) => (
-    <tr className="hover:bg-gray-50">
-      <td className="px-4 py-2 font-medium text-gray-700">{label}</td>
-      <td className="px-4 py-2 text-gray-800 text-center">{value || "-"}</td>
-    </tr>
-  );
-
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Back Button */}
+    <div className="p-4 sm:p-6 md:p-10 max-w-5xl mx-auto space-y-10">
+      {/* Back */}
       <button
         onClick={() => window.history.back()}
-        className="mb-6 px-5 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition text-sm sm:text-base"
       >
-        ← Back
+        <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+        Back
       </button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Image */}
-        <div className="lg:col-span-2 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden shadow-md h-96 relative">
-          {machine.imageUrl ? (
-            <Image
-              src={machine.imageUrl || "/images/placeholder.png"}
-              alt={machine.model}
-              fill
-              className="rounded-lg object-cover"
-            />
-          ) : (
-            <span className="text-gray-400">No Image Available</span>
+      {/* Hero Image */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="relative w-full h-[250px] sm:h-[350px] md:h-[500px] bg-white"
+      >
+        {machine?.imageUrl ? (
+          <Image
+            src={machine.imageUrl}
+            alt={machine.model || "Ironer Image"}
+            fill
+            className="object-contain"
+          />
+        ) : (
+          <span className="text-gray-400 flex justify-center items-center h-full text-sm sm:text-base">
+            No Image Available
+          </span>
+        )}
+      </motion.div>
+
+      {/* Machine Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="space-y-3 text-center"
+      >
+        <h1 className="text-2xl sm:text-3xl font-bold">{machine.model}</h1>
+        <h2 className="text-gray-500 text-sm sm:text-base">
+          {machine.category || "Ironer"}
+        </h2>
+
+        {/* Badges */}
+        <div className="flex flex-wrap justify-center gap-2 sm:gap-3 pt-4">
+          {machine.capacity && (
+            <span className="flex items-center gap-1 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-blue-50 text-blue-700 text-xs sm:text-sm font-medium">
+              <Scale className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {machine.capacity}{" "}
+              kg
+            </span>
+          )}
+          {machine.heatSource && (
+            <span className="flex items-center gap-1 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-green-50 text-green-700 text-xs sm:text-sm font-medium">
+              <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {machine.heatSource}
+            </span>
           )}
         </div>
+      </motion.div>
 
-        {/* Machine Specs */}
-        <div className="lg:col-span-3 space-y-6">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-2xl font-bold text-center mb-2">{machine.model}</h2>
-            <h3 className="text-gray-600 text-center mb-4">{machine.category || "Category"}</h3>
-            <table className="w-full text-left border-collapse divide-y divide-gray-200">
+      {/* General Specs */}
+      <motion.section
+        initial={{ opacity: 0, y: 40 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.6 }}
+        className="border-t pt-6 sm:pt-10"
+      >
+        <h2 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">
+          General Specifications
+        </h2>
+        <div className="overflow-x-auto">
+          <table className="w-full border-t border-gray-200 text-gray-700 text-sm sm:text-base">
+            <tbody>
+              {renderRow("Description", machine.description)}
+              {renderRow("Width", machine.width)}
+              {renderRow("Height", machine.height)}
+              {renderRow("Depth", machine.depth)}
+            </tbody>
+          </table>
+        </div>
+      </motion.section>
+
+      {/* Gas */}
+      {machine.gasType && (
+        <motion.section
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="border-t pt-6 sm:pt-10"
+        >
+          <h2 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">
+            🔥 Gas
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full border-t border-gray-200 text-gray-700 text-sm sm:text-base">
               <tbody>
-                {renderTableRow("Description", machine.description)}
-                {renderTableRow("Heat Type", machine.heatSource)}
-                {renderTableRow("Width", machine.width)}
-                {renderTableRow("Height", machine.height)}
-                {renderTableRow("Depth", machine.depth)}
-                {renderTableRow("Capacity", machine.capacity)}
+                {renderRow("Type", machine.gasType)}
+                {renderRow("Load", machine.gasLoad)}
+                {renderRow("Pressure", machine.gasPressure)}
+                {renderRow("Connection Height", machine.gasConnectionHeight)}
+                {renderRow("Supply Height", machine.gasSupplyHeight)}
+                {renderRow("BTU/hr", machine.gasBTU)}
               </tbody>
             </table>
           </div>
+        </motion.section>
+      )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Gas */}
-          {machine.gasType && (
-            <div className="bg-white p-4 rounded-lg shadow-md">
-              <h3 className="text-xl font-bold mb-4 text-center">Gas</h3>
-              <table className="w-full divide-y divide-gray-200 text-gray-700">
-                <tbody>
-                  {renderTableRow("Type", machine.gasType)}
-                  {renderTableRow("Load", machine.gasLoad)}
-                  {renderTableRow("Pressure", machine.gasPressure)}
-                  {renderTableRow("Connection Height", machine.gasConnectionHeight)}
-                  {renderTableRow("Supply Height", machine.gasSupplyHeight)}
-                  {renderTableRow("BTU/hr", machine.gasBTU)}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-
-            {/* Electricity */}
-            <div className="bg-white p-4 rounded-lg shadow-md">
-              <h3 className="text-xl font-bold mb-4 text-center">Electricity</h3>
-              <table className="w-full divide-y divide-gray-200 text-gray-700">
-                <tbody>
-                  {renderTableRow("Voltage / Frequency / Phase", machine.voltage)}
-                  {renderTableRow("Total Load", machine.totalLoad)}
-                  {renderTableRow("Recommended Fuse", machine.recommendedFuse)}
-                  {renderTableRow("Connection Height", machine.connectionHeight)}
-                  {renderTableRow("Connection Type", machine.connectionType)}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Exhaust */}
-            <div className="bg-white p-4 rounded-lg shadow-md md:col-span-2">
-              <h3 className="text-xl font-bold mb-4 text-center">Exhaust</h3>
-              <table className="w-full divide-y divide-gray-200 text-gray-700">
-                <tbody>
-                  {renderTableRow("Diameter", machine.diameterFlow)}
-                  {renderTableRow("Pressure Drop - Pa", machine.pressureDrop)}
-                  {renderTableRow("Volume - m³/h", machine.volumeFlow)}
-                </tbody>
-              </table>
-            </div>
-          </div>
-            {/* Add to Cart Button */}
-          <button
-            onClick={() => {
-              toast.success(`${machine.model} added to cart ✅`);
-              addToCart(machine);
-            }}
-            className="mt-4 w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-          >
-            ➕ Add for Computation
-          </button>
+      {/* Electricity */}
+      <motion.section
+        initial={{ opacity: 0, y: 40 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+        className="border-t pt-6 sm:pt-10"
+      >
+        <h2 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">
+          ⚡ Electricity
+        </h2>
+        <div className="overflow-x-auto">
+          <table className="w-full border-t border-gray-200 text-gray-700 text-sm sm:text-base">
+            <tbody>
+              {renderRow("Voltage / Frequency / Phase", machine.voltage)}
+              {renderRow("Total Load", machine.totalLoad)}
+              {renderRow("Recommended Fuse", machine.recommendedFuse)}
+              {renderRow("Connection Height", machine.connectionHeight)}
+              {renderRow("Connection Type", machine.connectionType)}
+            </tbody>
+          </table>
         </div>
-      </div>
+      </motion.section>
+
+      {/* Exhaust */}
+      <motion.section
+        initial={{ opacity: 0, y: 40 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.6, delay: 0.3 }}
+        className="border-t pt-6 sm:pt-10"
+      >
+        <h2 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">
+          💨 Exhaust
+        </h2>
+        <div className="overflow-x-auto">
+          <table className="w-full border-t border-gray-200 text-gray-700 text-sm sm:text-base">
+            <tbody>
+              {renderRow("Diameter", machine.diameterFlow)}
+              {renderRow("Pressure Drop - Pa", machine.pressureDrop)}
+              {renderRow("Volume - m³/h", machine.volumeFlow)}
+            </tbody>
+          </table>
+        </div>
+      </motion.section>
+
+      {/* Floating Add to Cart */}
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.4 }}
+        className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[90%] sm:w-auto sm:translate-x-0 sm:left-auto sm:right-6 lg:static"
+      >
+        <button
+          onClick={() => {
+            toast.success(`${machine.model} added to cart ✅`);
+            addToCart(machine);
+          }}
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full bg-green-600 text-white hover:bg-green-700 transition text-sm sm:text-lg font-semibold shadow-md hover:shadow-lg"
+        >
+          <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
+          <span className="hidden sm:inline">Add for Computation</span>
+          <span className="sm:hidden">Add</span>
+        </button>
+      </motion.div>
     </div>
   );
 }

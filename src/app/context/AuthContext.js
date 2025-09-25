@@ -9,6 +9,9 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider, // 👈 needed
 } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
@@ -16,7 +19,7 @@ const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [role, setRole] = useState(null); // ✅ track role
+  const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -25,7 +28,6 @@ export function AuthProvider({ children }) {
       if (currentUser) {
         setUser(currentUser);
 
-        // fetch role from Firestore
         const ref = doc(db, "users", currentUser.uid);
         const snap = await getDoc(ref);
         if (snap.exists()) {
@@ -42,11 +44,7 @@ export function AuthProvider({ children }) {
 
   const register = async (email, password, role = "user") => {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
-    // Save role in Firestore
-    await setDoc(doc(db, "users", cred.user.uid), {
-      email,
-      role,
-    });
+    await setDoc(doc(db, "users", cred.user.uid), { email, role });
   };
 
   const login = async (email, password, redirectPath = "/") => {
@@ -61,9 +59,25 @@ export function AuthProvider({ children }) {
     router.replace("/login");
   };
 
+  // 👇 new: reauthenticate + change password
+  const changePassword = async (currentPassword, newPassword) => {
+    if (!auth.currentUser) throw new Error("No user logged in.");
+
+    const cred = EmailAuthProvider.credential(
+      auth.currentUser.email,
+      currentPassword
+    );
+
+    // 🔑 Reauthenticate first
+    await reauthenticateWithCredential(auth.currentUser, cred);
+
+    // ✅ Then update password
+    await updatePassword(auth.currentUser, newPassword);
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user, role, loading, register, login, logout }}
+      value={{ user, role, loading, register, login, logout, changePassword }}
     >
       {children}
     </AuthContext.Provider>

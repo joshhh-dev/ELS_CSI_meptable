@@ -68,6 +68,12 @@ export default function HomePage() {
                   >
                     Computations
                   </Link>
+                  <Link
+                    href="/change_pass"
+                    className="px-6 py-3 bg-blue-400 text-gray-900 rounded-lg font-semibold shadow hover:bg-blue-500 transition transform hover:-translate-y-1"
+                  >
+                    Change Password
+                  </Link>
                 </>
               ) : (
                 <>
