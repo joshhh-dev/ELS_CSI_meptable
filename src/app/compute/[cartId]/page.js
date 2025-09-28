@@ -245,7 +245,7 @@ const expandedMachines = [];
 // XLSX export: single sheet, columns per machine + Total column
 const exportToXLSX = async () => {
   try {
-    const XLSX = await import("xlsx");
+    const XLSX = await import("xlsx-js-style");
     
    // ✅ Expand machines by quantity
     const expandedMachines = [];
@@ -262,7 +262,8 @@ const exportToXLSX = async () => {
     // ✅ Build machine objects
     const machines = expandedMachines.map((m, i) => ({
       name: (m.model || `Machine ${i + 1}`).toString(),
-      category: (m.category || "Unknown").toString(),
+      gForce: Number(m.gFactor || 0),
+      category: (m.category || "-").toString(),
       heatSource: (m.heatSource || "-").toString(),
       totalLoad: Number(m.totalLoad || 0),
       gasBTU: Number(m.gasBTU || 0),
@@ -321,6 +322,7 @@ const exportToXLSX = async () => {
     // ✅ Section + row configs
     const sections = [
       {
+
         title: "DIMENSIONS",
         rows: [
           { label: "Weight (kg)", key: "weight", sum: false },
@@ -378,7 +380,7 @@ const exportToXLSX = async () => {
         title: "DRAIN",
         rows: [
           { label: "Drain Connection Height (cm)", key: "drain.connectionHeight", sum: false },
-          { label: "Drain Diameter", key: "drain.diameter", sum: false },
+          { label: "Drain Diameter(mm)", key: "drain.diameter", sum: false },
           { label: "Suggested Drain Height (cm)", key: "drain.supplyHeight", sum: false },
         ],
       },
@@ -396,6 +398,7 @@ const exportToXLSX = async () => {
     const header = ["Type", ...machines.map((m) => m.category), "Total Consumption"];
     const modelRow = ["Model", ...machines.map((m) => m.name), ""];
     const heatRow = ["Heat Source", ...machines.map((m) => m.heatSource), ""];
+    const forcerRow = ["G-Force", ...machines.map((m) => m.gForce), ""];
 
     // ✅ Row builder
     const getValue = (obj, path) =>
@@ -410,7 +413,7 @@ const exportToXLSX = async () => {
     };
 
     // ✅ Assemble all rows
-    const aoa = [header, modelRow, heatRow, []];
+    const aoa = [header, modelRow, heatRow, forcerRow, []];
     sections.forEach((sec) => {
       aoa.push([sec.title]);
       sec.rows.forEach((row) => aoa.push(buildRow(row)));
@@ -420,12 +423,27 @@ const exportToXLSX = async () => {
     // ✅ Create sheet
     const ws = XLSX.utils.aoa_to_sheet(aoa);
     const colCount = header.length;
+
+    // Set column widths
     ws["!cols"] = Array.from({ length: colCount }, (_, i) => ({
       wch: i === 0 ? 30 : 20,
     }));
 
-    // Styling (keep your existing cell styling logic here if needed)
+Object.keys(ws).forEach((cellAddr) => {
+  if (cellAddr[0] === "!") return;
 
+  if (!ws[cellAddr].s) ws[cellAddr].s = {};
+  ws[cellAddr].s.alignment = { horizontal: "center", vertical: "center" };
+
+  // Make first row (headers) bold
+  const row = parseInt(cellAddr.match(/\d+/)[0], 10); 
+  if (row === 1) {
+    ws[cellAddr].s.font = { bold: true };
+  }
+});
+
+
+    // Styling (keep your existing cell styling logic here if needed)
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Consumption");
   const now = new Date();
@@ -444,7 +462,7 @@ const exportToXLSX = async () => {
 
   XLSX.writeFile(wb, `MEP-${formattedDateTime}.xlsx`);
 
-    toast.success("📗 Exported (.xlsx) with machines as columns");
+    toast.success("Exported (.xlsx) with machines as columns");
   } catch (e) {
     console.error(e);
     toast.error("Failed to export XLSX");
