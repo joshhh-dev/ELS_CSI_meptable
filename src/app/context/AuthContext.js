@@ -61,7 +61,10 @@ export function AuthProvider({ children }) {
 
   // 👇 new: reauthenticate + change password
   const changePassword = async (currentPassword, newPassword) => {
-    if (!auth.currentUser) throw new Error("No user logged in.");
+
+    try {
+    if (!auth.currentUser) 
+      throw new Error("No user logged in.");
 
     const cred = EmailAuthProvider.credential(
       auth.currentUser.email,
@@ -73,6 +76,20 @@ export function AuthProvider({ children }) {
 
     // ✅ Then update password
     await updatePassword(auth.currentUser, newPassword);
+
+
+    // Optional: force logout after password change
+    await logout(auth.currentUser);
+    
+
+  
+    console.log("Password changed successfully! Please log in again.");
+
+    } catch (error) {
+      console.error("Error changing password:", error);
+      throw error;
+    }
+
   };
 
   return (

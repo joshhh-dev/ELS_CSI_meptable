@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function ChangePasswordPage() {
   const { changePassword, user } = useAuth();
@@ -10,6 +11,7 @@ export default function ChangePasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
