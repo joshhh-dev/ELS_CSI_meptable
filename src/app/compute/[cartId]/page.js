@@ -595,33 +595,35 @@ const COLORS = {
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
             <Pie
-              data={viewMode === "currency"
-                ? [
-                    { name: "Electricity", value: totals.electricity, fill: COLORS.currency.electricity },
-                    { name: "Gas", value: totals.gas, fill: COLORS.currency.gas },
-                    { name: "Cold Water", value: totals.waterCold, fill: COLORS.currency.waterCold },
-                    { name: "Hot Water", value: totals.waterHot, fill: COLORS.currency.waterHot },
-                  ]
-                : [
-                    { name: "Electricity", value: totals.rawElectricity, fill: COLORS.usage.electricity },
-                    { name: "Gas - Washer", value: totals.rawGasHotWater, fill: COLORS.usage.gasWasher },
-                    { name: "Gas - Dryer", value: totals.rawGasDryer, fill: COLORS.usage.gasDryer },
-                    { name: "Gas - Ironer", value: totals.rawGasIroner, fill: COLORS.usage.gasIroner },
-                    { name: "Cold Water", value: totals.rawColdWater, fill: COLORS.usage.waterCold },
-                    { name: "Hot Water", value: totals.rawHotWater, fill: COLORS.usage.waterHot },
-                  ]
+              data={
+                viewMode === "currency"
+                  ? [
+                      { name: "Electricity", value: totals.electricity, fill: COLORS.currency.electricity },
+                      { name: "Gas", value: totals.gas, fill: COLORS.currency.gas },
+                      { name: "Cold Water", value: totals.waterCold, fill: COLORS.currency.waterCold },
+                      { name: "Hot Water", value: totals.waterHot, fill: COLORS.currency.waterHot },
+                    ]
+                  : [
+                      { name: "Electricity", value: totals.rawElectricity, fill: COLORS.usage.electricity },
+                      { name: "Gas - Washer", value: totals.rawGasHotWater, fill: COLORS.usage.gasWasher },
+                      { name: "Gas - Dryer", value: totals.rawGasDryer, fill: COLORS.usage.gasDryer },
+                      { name: "Gas - Ironer", value: totals.rawGasIroner, fill: COLORS.usage.gasIroner },
+                      { name: "Cold Water", value: totals.rawColdWater, fill: COLORS.usage.waterCold },
+                      { name: "Hot Water", value: totals.rawHotWater, fill: COLORS.usage.waterHot },
+                    ]
               }
               dataKey="value"
               nameKey="name"
               cx="50%"
               cy="50%"
               outerRadius={100}
-              label={(entry) =>
+              label={({ name, value, percent }) =>
                 viewMode === "currency"
-                  ? `${entry.name}: ${formatCurrency(entry.value)}`
-                  : `${entry.name}: ${entry.value.toFixed(2)}`
+                  ? `${name}: ${formatCurrency(value)} (${(percent * 100).toFixed(1)}%)`
+                  : `${name}: ${value.toFixed(2)} (${(percent * 100).toFixed(1)}%)`
               }
             />
+
               <Tooltip
                 formatter={(value) =>
                   viewMode === "currency" ? formatCurrency(value) : value.toFixed(2)

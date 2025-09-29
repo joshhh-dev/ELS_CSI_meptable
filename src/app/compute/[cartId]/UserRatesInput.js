@@ -37,19 +37,39 @@ const getUtilitiesByCategory = (category) => {
 
 export default function UserRatesInput({ categoryRates, setCategoryRates, items, setItems, hour }) {
   // Handle changes to utility rates inputs
-  const handleRateChange = (categoryKey, key) => (e) => {
-    const value = Math.max(0, parseFloat(e.target.value) || 0);
-    setCategoryRates((prev) => ({
-      ...prev,
-      [categoryKey]: { ...prev[categoryKey], [key]: value },
-    }));
-  };
+    const handleRateChange = (categoryKey, key) => (e) => {
+      const value = e.target.value;
+      setCategoryRates((prev) => ({
+        ...prev,
+        [categoryKey]: {
+          ...prev[categoryKey],
+          [key]: value, // keep raw string
+        },
+      }));
+    };
+
+    const handleRateBlur = (categoryKey, key) => (e) => {
+      const num = parseFloat(e.target.value);
+      setCategoryRates((prev) => ({
+        ...prev,
+        [categoryKey]: {
+          ...prev[categoryKey],
+          [key]: isNaN(num) ? 0 : Math.max(0, num),
+        },
+      }));
+    };
+
+
 
   // Update machine quantity, enforcing minimum of 1
-  const updateQuantity = (id, quantity) =>
+  const updateQuantity = (id, value) =>
     setItems((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, quantity: Math.max(1, quantity) } : m))
+      prev.map((m) =>
+        m.id === id ? { ...m, quantity: value } : m
+      )
     );
+
+
 
   // Remove machine by id
   const removeMachine = (id) => setItems((prev) => prev.filter((m) => m.id !== id));
@@ -117,10 +137,10 @@ export default function UserRatesInput({ categoryRates, setCategoryRates, items,
                     <input
                       id={`${rateKey}-${key}`}
                       type="number"
-                      min="0"
-                      step="0.01"
-                      value={categoryRates[rateKey]?.[key] || 0}
+                      step="1"
+                      value={categoryRates[rateKey]?.[key] ?? ""}
                       onChange={handleRateChange(rateKey, key)}
+                      onBlur={handleRateBlur(rateKey, key)}
                       className="mt-1 w-32 rounded-lg border-gray-300 shadow-sm
                                  focus:border-indigo-500 focus:ring focus:ring-indigo-200 px-3 py-2 text-sm"
                       aria-describedby={`${rateKey}-${key}-desc`}
@@ -182,14 +202,28 @@ export default function UserRatesInput({ categoryRates, setCategoryRates, items,
                     <input
                       id={`quantity-${machine.id}`}
                       type="number"
-                      min="1"
+                      min="0"
                       step="1"
-                      value={machine.quantity || 1}
-                      onChange={(e) => updateQuantity(machine.id, parseInt(e.target.value) || 1)}
+                      value={machine.quantity ?? ""}   // allow empty string
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        // let it be empty while typing
+                        if (val === "") {
+                          updateQuantity(machine.id, "");
+                        } else {
+                          updateQuantity(machine.id, Math.max(0, parseInt(val, 10) || 0));
+                        }
+                      }}
+                      onBlur={(e) => {
+                        // enforce minimum 1 only when leaving the field
+                        if (e.target.value === "" || e.target.value === "0") {
+                          updateQuantity(machine.id, 1);
+                        }
+                      }}
                       className="w-16 text-center rounded-lg border-gray-300 shadow-sm
-                                 focus:border-indigo-500 focus:ring focus:ring-indigo-200 px-2 py-1"
-                      aria-live="polite"
+                                focus:border-indigo-500 focus:ring focus:ring-indigo-200 px-2 py-1"
                     />
+
                     <button
                       onClick={() => removeMachine(machine.id)}
                       className="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition"
