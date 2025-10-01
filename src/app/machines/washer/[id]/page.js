@@ -259,7 +259,7 @@ export default function WasherMachinePage() {
       >
         <button
           onClick={() => {
-            toast.success(`${machine.model} added to cart ✅`);
+            toast.success(`${machine.model} added for computation ✅`);
             addToCart(machine);
           }}
           className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full bg-green-600 text-white hover:bg-green-700 transition text-sm sm:text-lg font-semibold shadow-md hover:shadow-lg"
