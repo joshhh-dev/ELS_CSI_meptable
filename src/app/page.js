@@ -64,13 +64,13 @@ export default function HomePage() {
                   </Link>
                   <Link
                     href="/compute"
-                    className="px-6 py-3 bg-yellow-400 text-gray-900 rounded-lg font-semibold shadow hover:bg-yellow-500 transition transform hover:-translate-y-1"
+                    className="px-6 py-3 bg-white text-blue-700 rounded-lg font-semibold shadow hover:shadow-lg transition transform hover:-translate-y-1"
                   >
                     Computations
                   </Link>
                   <Link
                     href="/change_pass"
-                    className="px-6 py-3 bg-blue-400 text-gray-900 rounded-lg font-semibold shadow hover:bg-blue-500 transition transform hover:-translate-y-1"
+                    className="px-6 py-3 bg-white text-blue-700 rounded-lg font-semibold shadow hover:shadow-lg transition transform hover:-translate-y-1"
                   >
                     Change Password
                   </Link>
