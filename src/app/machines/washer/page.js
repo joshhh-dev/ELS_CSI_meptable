@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { fetchMachine } from "../../lib/firestoreService";
 import { useCart } from "../../context/CartContext";
-import { ShoppingCart, Package } from "lucide-react";
+import { ShoppingCart, Package, PlusCircleIcon } from "lucide-react";
 import { toast } from "react-toastify";
 import Image from "next/image";
 
@@ -89,7 +89,7 @@ export default function WasherPage() {
                 className="absolute top-3 right-3 bg-blue-600 text-white p-2 rounded-full shadow-md 
                   hover:bg-blue-700 transition transform group-hover:scale-110"
               >
-                <ShoppingCart size={18} />
+                <PlusCircleIcon size={18} />
               </button>
 
               {/* Hover glow effect */}

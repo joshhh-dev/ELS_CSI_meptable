@@ -4,7 +4,7 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useCart } from "../../context/CartContext";
 import { useRouter } from "next/navigation";
-import { ShoppingCart } from "lucide-react";
+import { PlusCircleIcon, ShoppingCart } from "lucide-react";
 import { toast } from "react-toastify";
 import Image from "next/image";
 
@@ -93,7 +93,7 @@ export default function IronersPage() {
                 className="absolute top-3 right-3 bg-blue-600 text-white p-2 rounded-full shadow-md 
                   hover:bg-blue-700 transition transform group-hover:scale-110"
               >
-                <ShoppingCart size={18} />
+                <PlusCircleIcon size={18} />
               </button>
 
               {/* Hover glow effect */}

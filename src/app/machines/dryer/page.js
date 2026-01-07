@@ -4,7 +4,7 @@ import { db } from "../../lib/firebase";
 import { collection, getDocs } from "firebase/firestore";
 import { useCart } from "../../context/CartContext";
 import { useRouter } from "next/navigation";
-import { ShoppingCart, Package, ImportIcon } from "lucide-react";
+import { ShoppingCart, PlusCircleIcon, Package, ImportIcon, Plus } from "lucide-react";
 import { toast } from "react-toastify";
 import Image from "next/image";
 
@@ -93,7 +93,7 @@ export default function DryerPage() {
                 className="absolute top-3 right-3 bg-blue-600 text-white p-2 rounded-full shadow-md 
                   hover:bg-blue-700 transition transform group-hover:scale-110"
               >
-                <ShoppingCart size={18} />
+                <PlusCircleIcon size={18} />
               </button>
 
               {/* Hover glow effect */}

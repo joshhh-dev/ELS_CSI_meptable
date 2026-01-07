@@ -8,7 +8,7 @@ import { useCart } from "../../../context/CartContext";
 import { toast } from "react-toastify";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { ArrowLeft, ShoppingCart, Scale, Flame, Gauge } from "lucide-react";
+import { ArrowLeft, PlusCircleIcon, Scale, Flame, Gauge } from "lucide-react";
 
 export default function WasherMachinePage() {
   const { id } = useParams();
@@ -264,7 +264,7 @@ export default function WasherMachinePage() {
           }}
           className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full bg-green-600 text-white hover:bg-green-700 transition text-sm sm:text-lg font-semibold shadow-md hover:shadow-lg"
         >
-          <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
+          <PlusCircleIcon className="w-4 h-4 sm:w-5 sm:h-5" />
           <span className="hidden sm:inline">Add for Computation</span>
           <span className="sm:hidden">Add</span>
         </button>
