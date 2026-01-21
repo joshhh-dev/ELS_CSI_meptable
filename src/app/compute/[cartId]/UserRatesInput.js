@@ -99,7 +99,7 @@ let washerGasCostPerLoad = 0;
 // Washer: per-load kg × gas rate
 if (isWasher) {
     washerGasCostPerLoad =
-    ((parseFloat(machine.hotWater.waterConsump) || 0) *
+    ((parseFloat(machine.hotWater?.waterConsump) || 0) *
       8.34 *
       60) /
     46452;
