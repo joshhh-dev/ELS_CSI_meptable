@@ -105,6 +105,7 @@ export default function CartDetailPage() {
           46452 *
           qty *
           hour;
+          
         gasUsage = rawGasHotWater;
       } else if (cat.includes("DRYER")) {
         rawGasDryer =
@@ -115,23 +116,55 @@ export default function CartDetailPage() {
           ((parseFloat(machine.gasBTU) || 0) / BTU_TO_KG_GAS) * GAS_EFFICIENCY * qty * hour;
         gasUsage = rawGasIroner;
       }
+      
+let washerGasPerLoad = 0;
+let washerGasPerDay = 0;
+let washerGasCostPerLoad = 0;
+let washerGasCostPerDay = 0;
 
-    return {
-      electricity: electricUsage * (rates.electricity || 0),
-      waterCold: coldUsage * (rates.waterCold || 0),
-      waterHot: hotUsage * (rates.waterHot || 0),
-      gas: gasUsage * (rates.gas || 0),
-      rawElectricity: electricUsage, // ✅ usage (kWh)
-      rawGasHotWater,
-      rawGasDryer,
-      rawGasIroner,
-      rawColdWater: coldUsage,
-      rawHotWater: hotUsage,
-    };
+if (cat.includes("WASHER") && machine.hotWater?.waterConsump) {
+  washerGasPerLoad =
+    ((parseFloat(machine.hotWater.waterConsump) || 0) *
+      8.34 *
+      HOT_WATER_TEMP_RISE) /
+    46452;
+
+  washerGasPerDay = washerGasPerLoad * qty * hour;
+  washerGasCostPerLoad = washerGasPerLoad * (rates.gas || 0);
+  washerGasCostPerDay = washerGasPerDay * (rates.gas || 0);
+}
+
+
+      return {
+        electricity: electricUsage * (rates.electricity || 0),
+        waterCold: coldUsage * (rates.waterCold || 0),
+        waterHot: hotUsage * (rates.waterHot || 0),
+        gas: gasUsage * (rates.gas || 0),
+
+ washerGasPerLoad,
+  washerGasPerDay,
+  washerGasCostPerLoad,
+  washerGasCostPerDay,
+
+        rawElectricity: electricUsage,
+        rawGasHotWater,
+        rawGasDryer,
+        rawGasIroner,
+        rawColdWater: coldUsage,
+        rawHotWater: hotUsage,
+      };
+
 
     },
     [hour, categoryRates]
   );
+  const totalWasherLoads = useMemo(() => {
+  return items.reduce((sum, m) => {
+    if (!m.category?.toUpperCase().includes("WASHER")) return sum;
+    return sum + (m.quantity || 0) * (hour || 0);
+  }, 0);
+}, [items, hour]);
+
 
   // Grand totals
     const totals = useMemo(() => {
@@ -143,6 +176,9 @@ export default function CartDetailPage() {
           acc.waterHot += c.waterHot;
           acc.gas += c.gas;
 
+acc.washerGasPerDay += c.washerGasPerDay || 0;
+acc.washerGasCostPerDay += c.washerGasCostPerDay || 0;
+
           acc.rawElectricity += c.rawElectricity;
           acc.rawGasHotWater += c.rawGasHotWater;
           acc.rawGasDryer += c.rawGasDryer;
@@ -152,10 +188,20 @@ export default function CartDetailPage() {
           return acc;
         },
         { 
-          electricity: 0, waterCold: 0, waterHot: 0, gas: 0,
-          rawElectricity: 0, rawGasHotWater: 0,
-          rawGasDryer: 0, rawGasIroner: 0, // ✅ initialize
-          rawColdWater: 0, rawHotWater: 0,
+          electricity: 0, 
+          waterCold: 0, 
+          waterHot: 0, 
+          gas: 0,
+
+         washerGasPerDay: 0,
+          washerGasCostPerDay: 0, 
+
+          rawElectricity: 0, 
+          rawGasHotWater: 0,
+          rawGasDryer: 0, 
+          rawGasIroner: 0, // ✅ initialize
+          rawColdWater: 0, 
+          rawHotWater: 0,
         }
       );
     }, [items, calculateCostPerLoad]);
@@ -707,13 +753,26 @@ const COLORS = {
                   <div>
                     <p className="font-medium">Gas</p>
                     <p className="text-gray-900">{formatCurrency(totals.gas)}</p>
+
+                    {/* Washer */}
                     <p className="text-xs text-gray-500">
-                      Dryer: {totals.rawGasDryer.toFixed(2)} kg
+                      Washer: {totals.rawGasHotWater.toFixed(2)} kg / day
                     </p>
+                    <p className="text-xs text-gray-500 pl-3">
+                      • Gas / load: {(totals.washerGasPerDay / totalWasherLoads || 0).toFixed(3)} kg
+                    </p>
+
+                    {/* Dryer */}
+                    <p className="text-xs text-gray-500 mt-1">
+                      Dryer: {totals.rawGasDryer.toFixed(2)} kg / day
+                    </p>
+
+                    {/* Ironer */}
                     <p className="text-xs text-gray-500">
-                      Ironer: {totals.rawGasIroner.toFixed(2)} kg
+                      Ironer: {totals.rawGasIroner.toFixed(2)} kg / day
                     </p>
                   </div>
+
                 </div>
               </div>
 

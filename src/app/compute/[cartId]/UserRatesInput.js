@@ -30,7 +30,7 @@ const getRateKey = (category) => {
 // Helper to get applicable utilities based on category
 const getUtilitiesByCategory = (category) => {
   const catUpper = category.toUpperCase();
-  if (catUpper.includes("WASHER")) return ["electricity", "waterCold", "waterHot"];
+  if (catUpper.includes("WASHER")) return ["electricity", "waterCold", "waterHot", "gas"];
   if (catUpper.includes("DRYER") || catUpper.includes("IRONERS")) return ["electricity", "gas"];
   return ["electricity", "waterCold", "waterHot", "gas"];
 };
@@ -83,17 +83,42 @@ export default function UserRatesInput({ categoryRates, setCategoryRates, items,
     const ratesKey = getRateKey(machine.category);
     const rates = categoryRates[ratesKey] || {};
 
+      // Define category flags
+  const isWasher = catUpper.includes("WASHER");
+  const isDryer = catUpper.includes("DRYER");
+  const isIroner = catUpper.includes("IRONERS");
+  
     // Calculate usage per machine * quantity
     const electricUsage = (parseFloat(machine.totalLoad) || 0) * qty;
     const coldUsage = ((parseFloat(machine.coldWater?.waterConsump) || 0) / 1000) * qty; // L to m³
     const hotUsage = ((parseFloat(machine.hotWater?.waterConsump) || 0) / 1000) * qty; // L to m³
-    const gasUsage = ((parseFloat(machine.gasBTU) || 0) / BTU_TO_KG_GAS) * GAS_EFFICIENCY * qty;
+// Gas cost per load
+let gasCost = 0;
+let washerGasCostPerLoad = 0;
+
+// Washer: per-load kg × gas rate
+if (isWasher) {
+    washerGasCostPerLoad =
+    ((parseFloat(machine.hotWater.waterConsump) || 0) *
+      8.34 *
+      60) /
+    46452;
+
+  const gasRate = parseFloat(rates.gas) || 0;
+  gasCost = (washerGasCostPerLoad|| 0) * gasRate * qty;
+}
+
+// Dryer / Ironer: BTU → kg × efficiency × gas rate
+if (isDryer || isIroner) {
+  const gasRate = parseFloat(rates.gas) || 0;
+  gasCost = ((parseFloat(machine.gasBTU) || 0) / BTU_TO_KG_GAS) * GAS_EFFICIENCY * gasRate * qty;
+}
 
     return {
       electricity: electricUsage * (rates.electricity || 0),
       waterCold: catUpper.includes("WASHER") ? coldUsage * (rates.waterCold || 0) : 0,
       waterHot: catUpper.includes("WASHER") ? hotUsage * (rates.waterHot || 0) : 0,
-      gas: (catUpper.includes("DRYER") || catUpper.includes("IRONERS")) ? gasUsage * (rates.gas || 0) : 0,
+gas: gasCost,
     };
   };
 
@@ -189,7 +214,7 @@ export default function UserRatesInput({ categoryRates, setCategoryRates, items,
                           <p>Hot Water Cost per Load: {formatCurrency(cost.waterHot)}</p>
                         </>
                       )}
-                      {(isDryer || isIroner) && (
+                      {(isWasher || isDryer || isIroner) && (
                         <p>Gas Cost per Load: {formatCurrency(cost.gas)}</p>
                       )}
                     </div>
