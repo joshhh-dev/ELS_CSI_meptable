@@ -80,17 +80,23 @@ export default function CartDetailPage() {
 
       const rates = categoryRates[ratesKey] || {};
 
-      // Electricity
-      const electricUsage = (parseFloat(machine.totalLoad) || 0) * qty * hour;
+      // Use ironer-specific hours if available for ironers, otherwise use general hour
+      const isIroner = cat.includes("IRONER");
+      const operatingHours = isIroner && categoryRates.ironer_hours ? categoryRates.ironer_hours : hour;
+
+      // Electricity per load (independent of operating hours)
+      const electricUsagePerLoad = (parseFloat(machine.totalLoad) || 0) * qty;
+      // Electricity per day (for daily cost calculation)
+      const electricUsagePerDay = electricUsagePerLoad * operatingHours;
 
       // Water
       const coldUsage =
         cat.includes("WASHER")
-          ? ((parseFloat(machine.coldWater?.waterConsump) || 0) / 1000) * qty * hour
+          ? ((parseFloat(machine.coldWater?.waterConsump) || 0) / 1000) * qty * operatingHours
           : 0;
       const hotUsage =
         cat.includes("WASHER")
-          ? ((parseFloat(machine.hotWater?.waterConsump) || 0) / 1000) * qty * hour
+          ? ((parseFloat(machine.hotWater?.waterConsump) || 0) / 1000) * qty * operatingHours
           : 0;
 
           const waterRate = parseFloat(rates.water) || 0;
@@ -106,16 +112,16 @@ export default function CartDetailPage() {
           ((parseFloat(machine.hotWater?.waterConsump) || 0) * 8.34 * HOT_WATER_TEMP_RISE) /
           46452 *
           qty *
-          hour;
+          operatingHours;
           
         gasUsage = rawGasHotWater;
       } else if (cat.includes("DRYER")) {
         rawGasDryer =
-          ((parseFloat(machine.gasBTU) || 0) / BTU_TO_KG_GAS) * GAS_EFFICIENCY * qty * hour;
+          ((parseFloat(machine.gasBTU) || 0) / BTU_TO_KG_GAS) * GAS_EFFICIENCY * qty * operatingHours;
         gasUsage = rawGasDryer;
       } else if (cat.includes("IRONER")) {
         rawGasIroner =
-          ((parseFloat(machine.gasBTU) || 0) / BTU_TO_KG_GAS) * GAS_EFFICIENCY * qty * hour;
+          ((parseFloat(machine.gasBTU) || 0) / BTU_TO_KG_GAS) * GAS_EFFICIENCY * qty * operatingHours;
         gasUsage = rawGasIroner;
       }
       
@@ -131,14 +137,14 @@ if (cat.includes("WASHER") && machine.hotWater?.waterConsump) {
       HOT_WATER_TEMP_RISE) /
     46452;
 
-  washerGasPerDay = washerGasPerLoad * qty * hour;
+  washerGasPerDay = washerGasPerLoad * qty * operatingHours;
   washerGasCostPerLoad = washerGasPerLoad * (rates.gas || 0);
   washerGasCostPerDay = washerGasPerDay * (rates.gas || 0);
 }
 
 
       return {
-        electricity: electricUsage * (rates.electricity || 0),
+        electricity: electricUsagePerDay * (rates.electricity || 0),
         waterCold: coldUsage * (rates.water || 0),
         waterHot: hotUsage * (rates.water || 0),
         gas: gasUsage * (rates.gas || 0),
@@ -148,7 +154,7 @@ if (cat.includes("WASHER") && machine.hotWater?.waterConsump) {
   washerGasCostPerLoad,
   washerGasCostPerDay,
 
-        rawElectricity: electricUsage,
+        rawElectricity: electricUsagePerLoad,
         rawGasHotWater,
         rawGasDryer,
         rawGasIroner,

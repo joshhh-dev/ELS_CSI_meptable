@@ -15,7 +15,7 @@ const formatCurrency = (value) =>
   new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(value);
 
 // Conversion constants
-const BTU_TO_KG_GAS = 46654.2;
+const BTU_TO_KG_GAS = 47654.2;
 const GAS_EFFICIENCY = 0.6;
 
 // Helper to get rate key based on category
@@ -45,6 +45,22 @@ export default function UserRatesInput({ categoryRates, setCategoryRates, items,
           ...prev[categoryKey],
           [key]: value, // keep raw string
         },
+      }));
+    };
+
+    const handleIronerHoursChange = (e) => {
+      const value = e.target.value;
+      setCategoryRates((prev) => ({
+        ...prev,
+        ironer_hours: value,
+      }));
+    };
+
+    const handleIronerHoursBlur = (e) => {
+      const num = parseFloat(e.target.value);
+      setCategoryRates((prev) => ({
+        ...prev,
+        ironer_hours: isNaN(num) ? 0 : Math.max(0, num),
       }));
     };
 
@@ -83,13 +99,16 @@ export default function UserRatesInput({ categoryRates, setCategoryRates, items,
     const ratesKey = getRateKey(machine.category);
     const rates = categoryRates[ratesKey] || {};
 
-      // Define category flags
-  const isWasher = catUpper.includes("WASHER");
-  const isDryer = catUpper.includes("DRYER");
-  const isIroner = catUpper.includes("IRONERS");
+    // Use ironer-specific hours if available for ironers, otherwise use general hour
+    const isWasher = catUpper.includes("WASHER");
+    const isDryer = catUpper.includes("DRYER");
+    const isIroner = catUpper.includes("IRONERS");
+    const operatingHours = isIroner && categoryRates.ironer_hours ? categoryRates.ironer_hours : hour;
   
-    // Calculate usage per machine * quantity
+    // Calculate electricity per load (independent of operating hours)
     const electricUsage = (parseFloat(machine.totalLoad) || 0) * qty;
+    // Calculate electricity per day for cost calculation
+    const electricUsagePerDay = electricUsage * operatingHours;
 const coldUsage =
   ((parseFloat(machine.coldWater?.waterConsump) || 0) / 1000) * qty;
 
@@ -115,9 +134,16 @@ if (isWasher) {
 }
 
 // Dryer / Ironer: BTU → kg × efficiency × gas rate
-if (isDryer || isIroner) {
+// For Ironers, divide by operating hours to get per-load cost
+if (isDryer) {
   const gasRate = parseFloat(rates.gas) || 0;
   gasCost = ((parseFloat(machine.gasBTU) || 0) / BTU_TO_KG_GAS) * GAS_EFFICIENCY * gasRate * qty;
+}
+
+if (isIroner) {
+  const gasRate = parseFloat(rates.gas) || 0;
+  const gasPerDay = ((parseFloat(machine.gasBTU) || 0) / BTU_TO_KG_GAS) * GAS_EFFICIENCY * gasRate * qty * operatingHours;
+  gasCost = operatingHours > 0 ? gasPerDay / operatingHours : 0; // Divide to get per-load cost
 }
 
     return {
@@ -134,6 +160,28 @@ if (isDryer || isIroner) {
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold"> Utility Rates & Machine Consumption</h2>
+
+      {/* Ironer Operating Hours */}
+      <div className="p-5 rounded-2xl shadow-lg border border-gray-200 bg-gradient-to-br from-blue-50 to-blue-100">
+        <label htmlFor="ironer-hours" className="flex flex-col text-sm font-medium text-gray-700">
+          Ironer Operating Hours (hours/day)
+          <input
+            id="ironer-hours"
+            type="number"
+            step="0.5"
+            min="0"
+            value={categoryRates.ironer_hours ?? ""}
+            onChange={handleIronerHoursChange}
+            onBlur={handleIronerHoursBlur}
+            className="mt-1 w-32 rounded-lg border-gray-300 shadow-sm
+                       focus:border-indigo-500 focus:ring focus:ring-indigo-200 px-3 py-2 text-sm"
+            aria-describedby="ironer-hours-desc"
+          />
+          <span id="ironer-hours-desc" className="sr-only">
+            Enter the operating hours per day for ironer machines
+          </span>
+        </label>
+      </div>
 
       {Object.entries(groupedItems).map(([category, machines]) => {
         const rateKey = getRateKey(category);
