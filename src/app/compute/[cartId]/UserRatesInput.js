@@ -30,9 +30,9 @@ const getRateKey = (category) => {
 // Helper to get applicable utilities based on category
 const getUtilitiesByCategory = (category) => {
   const catUpper = category.toUpperCase();
-  if (catUpper.includes("WASHER")) return ["electricity", "waterCold", "waterHot", "gas"];
+  if (catUpper.includes("WASHER")) return ["electricity", "water", "gas"];
   if (catUpper.includes("DRYER") || catUpper.includes("IRONERS")) return ["electricity", "gas"];
-  return ["electricity", "waterCold", "waterHot", "gas"];
+  return ["electricity", "water", "gas"];
 };
 
 export default function UserRatesInput({ categoryRates, setCategoryRates, items, setItems, hour }) {
@@ -90,8 +90,14 @@ export default function UserRatesInput({ categoryRates, setCategoryRates, items,
   
     // Calculate usage per machine * quantity
     const electricUsage = (parseFloat(machine.totalLoad) || 0) * qty;
-    const coldUsage = ((parseFloat(machine.coldWater?.waterConsump) || 0) / 1000) * qty; // L to m³
-    const hotUsage = ((parseFloat(machine.hotWater?.waterConsump) || 0) / 1000) * qty; // L to m³
+const coldUsage =
+  ((parseFloat(machine.coldWater?.waterConsump) || 0) / 1000) * qty;
+
+const hotUsage =
+  ((parseFloat(machine.hotWater?.waterConsump) || 0) / 1000) * qty;
+
+const waterRate = parseFloat(rates.water) || 0;
+
 // Gas cost per load
 let gasCost = 0;
 let washerGasCostPerLoad = 0;
@@ -116,9 +122,9 @@ if (isDryer || isIroner) {
 
     return {
       electricity: electricUsage * (rates.electricity || 0),
-      waterCold: catUpper.includes("WASHER") ? coldUsage * (rates.waterCold || 0) : 0,
-      waterHot: catUpper.includes("WASHER") ? hotUsage * (rates.waterHot || 0) : 0,
-gas: gasCost,
+  waterCold: isWasher ? coldUsage * waterRate : 0,
+  waterHot: isWasher ? hotUsage * waterRate : 0,
+      gas: gasCost,
     };
   };
 
@@ -148,8 +154,7 @@ gas: gasCost,
               {utilities.map((key) => {
                 const labelMap = {
                   electricity: "Electricity (₱/kWh)",
-                  waterCold: "Cold Water (₱/m³)",
-                  waterHot: "Hot Water (₱/m³)",
+                  water: "Water (₱/m³)",
                   gas: "Gas (₱/kg)",
                 };
                 return (

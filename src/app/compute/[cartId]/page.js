@@ -93,6 +93,8 @@ export default function CartDetailPage() {
           ? ((parseFloat(machine.hotWater?.waterConsump) || 0) / 1000) * qty * hour
           : 0;
 
+          const waterRate = parseFloat(rates.water) || 0;
+
       // Gas
       let gasUsage = 0;
       let rawGasHotWater = 0;
@@ -137,8 +139,8 @@ if (cat.includes("WASHER") && machine.hotWater?.waterConsump) {
 
       return {
         electricity: electricUsage * (rates.electricity || 0),
-        waterCold: coldUsage * (rates.waterCold || 0),
-        waterHot: hotUsage * (rates.waterHot || 0),
+        waterCold: coldUsage * (rates.water || 0),
+        waterHot: hotUsage * (rates.water || 0),
         gas: gasUsage * (rates.gas || 0),
 
  washerGasPerLoad,
