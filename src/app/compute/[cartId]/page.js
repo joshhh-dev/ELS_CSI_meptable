@@ -78,7 +78,15 @@ export default function CartDetailPage() {
     (machine) => {
       const qty = machine.quantity || 0;
       if (!qty || !hour)
-        return { electricity: 0, waterCold: 0, waterHot: 0, gas: 0, rawGasHotWater: 0 };
+        return { 
+          electricity: 0, 
+          waterCold: 0, 
+          waterHot: 0, 
+          gas: 0, 
+          rawGasHotWater: 0,
+          kwPerMachine: 0,
+          kwTotal: 0
+        };
 
       const cat = machine.category.toUpperCase();
       const ratesKey =
@@ -96,10 +104,14 @@ export default function CartDetailPage() {
       const isIroner = cat.includes("IRONER");
       const operatingHours = isIroner && categoryRates.ironer_hours ? categoryRates.ironer_hours : hour;
 
-      // Electricity per load (independent of operating hours)
-      const electricUsagePerLoad = (parseFloat(machine.totalLoad) || 0) * qty;
-      // Electricity per day (for daily cost calculation)
-      const electricUsagePerDay = electricUsagePerLoad * operatingHours;
+      // Electricity: KW TOTAL = KW per machine × quantity
+      // Use aveElecConsump instead of totalLoad for electricity calculation
+      const kwPerMachine = parseFloat(machine.aveElecConsump) || 0;
+      const kwTotal = kwPerMachine * qty; // Total KW = KW × QTY (no hours)
+      // Cost per load = KW TOTAL × cost per KW-HR
+      const costPerLoad = kwTotal * (rates.electricity || 0);
+      // Total cost per day = Cost per load × operating hours
+      const electricUsagePerDay = kwTotal * operatingHours; // kWh per day for usage display
 
       // Water
       const coldUsage =
@@ -162,10 +174,14 @@ if (cat.includes("WASHER") && machine.hotWater?.waterConsump) {
 
 
       return {
-        electricity: electricUsagePerDay * (rates.electricity || 0),
+        electricity: costPerLoad * operatingHours, // Total cost per day = Cost per load × operating hours
         waterCold: coldUsage * (rates.water || 0),
         waterHot: hotUsage * (rates.water || 0),
         gas: gasUsage * (rates.gas || 0),
+
+        // Electricity breakdown
+        kwPerMachine,
+        kwTotal, // KW TOTAL = KW × QTY (for summing all machines)
 
         washerGasPerLoad,
         washerGasPerDay,
@@ -175,7 +191,7 @@ if (cat.includes("WASHER") && machine.hotWater?.waterConsump) {
         dryerGasPerDay,
         ironerGasPerDay,
 
-        rawElectricity: electricUsagePerLoad,
+        rawElectricity: electricUsagePerDay,
         rawGasHotWater,
         rawGasDryer,
         rawGasIroner,
@@ -205,6 +221,9 @@ if (cat.includes("WASHER") && machine.hotWater?.waterConsump) {
           acc.waterHot += c.waterHot;
           acc.gas += c.gas;
 
+          // Sum up KW TOTAL for all machines
+          acc.kwTotal += c.kwTotal || 0;
+
 acc.washerGasPerDay += c.washerGasPerDay || 0;
 acc.washerGasCostPerDay += c.washerGasCostPerDay || 0;
 
@@ -223,6 +242,9 @@ acc.washerGasCostPerDay += c.washerGasCostPerDay || 0;
           waterCold: 0, 
           waterHot: 0, 
           gas: 0,
+
+          // Total KW across all machines
+          kwTotal: 0,
 
           washerGasPerDay: 0,
           washerGasCostPerDay: 0,
@@ -781,6 +803,23 @@ const COLORS = {
                     <p className="text-xs text-gray-500">
                       Usage: {totals.rawElectricity.toFixed(2)} kWh
                     </p>
+                    <p className="text-xs text-gray-600 font-semibold mt-1">
+                      Total KW: {totals.kwTotal?.toFixed(2) || "0.00"} kW
+                    </p>
+                    {/* Detailed breakdown per machine */}
+                    <div className="mt-2 pt-2 border-t border-gray-200 text-xs">
+                      <p className="text-gray-600 font-semibold mb-1">Breakdown:</p>
+                      {items.map((m) => {
+                        const kwPerMachine = parseFloat(m.aveElecConsump) || 0;
+                        const qty = m.quantity || 0;
+                        const kwTotal = kwPerMachine * qty;
+                        return (
+                          <p key={m.id} className="text-gray-500">
+                            {m.model}: {kwPerMachine.toFixed(2)} kW × {qty} = <strong>{kwTotal.toFixed(2)} kW</strong>
+                          </p>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {/* Gas */}

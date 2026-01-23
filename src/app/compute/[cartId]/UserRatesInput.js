@@ -131,10 +131,12 @@ export default function UserRatesInput({ categoryRates, setCategoryRates, items,
     const isIroner = catUpper.includes("IRONERS");
     const operatingHours = isIroner && categoryRates.ironer_hours ? categoryRates.ironer_hours : hour;
   
-    // Calculate electricity per load (independent of operating hours)
-    const electricUsage = (parseFloat(machine.totalLoad) || 0) * qty;
-    // Calculate electricity per day for cost calculation
-    const electricUsagePerDay = electricUsage * operatingHours;
+    // Electricity: KW TOTAL = KW per machine × quantity
+    // Use aveElecConsump instead of totalLoad for electricity calculation
+    const kwPerMachine = parseFloat(machine.aveElecConsump) || 0;
+    const kwTotal = kwPerMachine * qty; // Total KW = KW × QTY
+    // Calculate electricity per day for cost calculation = KW TOTAL × operating hours
+    const electricUsagePerDay = kwTotal * operatingHours;
 const coldUsage =
   ((parseFloat(machine.coldWater?.waterConsump) || 0) / 1000) * qty;
 
@@ -184,7 +186,7 @@ if (isIroner) {
 }
 
     return {
-      electricity: electricUsage * (rates.electricity || 0),
+      electricity: kwTotal * (rates.electricity || 0),
   waterCold: isWasher ? coldUsage * waterRate : 0,
   waterHot: isWasher ? hotUsage * waterRate : 0,
       gas: gasCost,
