@@ -34,6 +34,7 @@ const getRateKey = (category) => {
   if (catUpper.includes("WASHER")) return `washer_${category}`;
   if (catUpper.includes("DRYER")) return `dryer_${category}`;
   if (catUpper.includes("IRONERS")) return `ironers_${category}`;
+  if (catUpper.includes("WATER HEATER") || catUpper.includes("WATERHEATER")) return `waterheater_${category}`;
   return category;
 };
 
@@ -41,7 +42,7 @@ const getRateKey = (category) => {
 const getUtilitiesByCategory = (category) => {
   const catUpper = category.toUpperCase();
   if (catUpper.includes("WASHER")) return ["electricity", "water", "gas"];
-  if (catUpper.includes("DRYER") || catUpper.includes("IRONERS")) return ["electricity", "gas"];
+  if (catUpper.includes("DRYER") || catUpper.includes("IRONERS") || catUpper.includes("WATER HEATER") || catUpper.includes("WATERHEATER")) return ["electricity", "gas"];
   return ["electricity", "water", "gas"];
 };
 
@@ -129,6 +130,7 @@ export default function UserRatesInput({ categoryRates, setCategoryRates, items,
     const isWasher = catUpper.includes("WASHER");
     const isDryer = catUpper.includes("DRYER");
     const isIroner = catUpper.includes("IRONERS");
+    const isWaterHeater = catUpper.includes("WATER HEATER") || catUpper.includes("WATERHEATER");
     const operatingHours = isIroner && categoryRates.ironer_hours ? categoryRates.ironer_hours : hour;
   
     // Electricity: KW TOTAL = KW per machine × quantity
@@ -183,6 +185,19 @@ if (isIroner) {
   ironerGasKgPerLoad = ironerGasKgPerHour * qty;
   const gasRate = parseFloat(rates.gas) || 0;
   gasCost = ironerGasKgPerLoad * gasRate;
+}
+
+// Water Heater: Calculate KGS/HR and KGS per load
+let waterHeaterGasKgPerHour = 0;
+let waterHeaterGasKgPerLoad = 0;
+if (isWaterHeater) {
+  // Use gas.btuConsumption if available, otherwise fallback to gasBTU
+  const btuPerHr = parseFloat(machine.gas?.btuConsumption) || parseFloat(machine.gasBTU) || 0;
+  waterHeaterGasKgPerHour = getGasKgPerHour(btuPerHr);
+  // For water heater: KGS per Load = KGS/HR * Qty
+  waterHeaterGasKgPerLoad = waterHeaterGasKgPerHour * qty;
+  const gasRate = parseFloat(rates.gas) || 0;
+  gasCost = waterHeaterGasKgPerLoad * gasRate;
 }
 
     return {
@@ -286,6 +301,7 @@ if (isIroner) {
               const isWasher = catUpper.includes("WASHER");
               const isDryer = catUpper.includes("DRYER");
               const isIroner = catUpper.includes("IRONERS");
+              const isWaterHeater = catUpper.includes("WATER HEATER") || catUpper.includes("WATERHEATER");
               const machineRates = categoryRates[rateKey] || {};
 
               return (
@@ -304,7 +320,7 @@ if (isIroner) {
                           , Cold: {machine.coldWater?.waterConsump || 0} L
                         </>
                       )}
-                      {(isDryer || isIroner) && `, Gas: ${machine.gasBTU || 0} BTU`}
+                      {(isDryer || isIroner || isWaterHeater) && `, Gas: ${machine.gas?.btuConsumption || machine.gasBTU || 0} BTU`}
                     </p>
 
                     {/* Display per-machine cost */}
@@ -332,7 +348,15 @@ if (isIroner) {
                           <p className="text-xs text-gray-500">(Based on ₱{parseFloat(machineRates.gas) || 80}/kg)</p>
                         </>
                       )}
-                      {(isWasher || isDryer || isIroner) && (
+                      {isWaterHeater && (
+                        <>
+                          <p className="font-semibold text-teal-600">Gas KGS/HR: {cost.waterHeaterGasKgPerHour?.toFixed(3)} kg/hr</p>
+                          <p className="font-semibold text-teal-600">Gas KGS per Load: {cost.waterHeaterGasKgPerLoad?.toFixed(3)} kg</p>
+                          <p className="font-semibold text-teal-600">LPG Cost per Load: {formatCurrency(cost.waterHeaterGasKgPerLoad * lpgCostPerKg)}</p>
+                          <p className="text-xs text-gray-500">(Based on ₱{lpgCostPerKg}/kg)</p>
+                        </>
+                      )}
+                      {(isWasher || isDryer || isIroner || isWaterHeater) && (
                         <p>Gas Cost per Load: {formatCurrency(cost.gas)}</p>
                       )}
                     </div>

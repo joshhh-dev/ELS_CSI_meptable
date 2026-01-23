@@ -96,12 +96,15 @@ export default function CartDetailPage() {
           ? `dryer_${machine.category}`
           : cat.includes("IRONER")
           ? `ironers_${machine.category}`
+          : cat.includes("WATER HEATER") || cat.includes("WATERHEATER")
+          ? `waterheater_${machine.category}`
           : machine.category;
 
       const rates = categoryRates[ratesKey] || {};
 
       // Use ironer-specific hours if available for ironers, otherwise use general hour
       const isIroner = cat.includes("IRONER");
+      const isWaterHeater = cat.includes("WATER HEATER") || cat.includes("WATERHEATER");
       const operatingHours = isIroner && categoryRates.ironer_hours ? categoryRates.ironer_hours : hour;
 
       // Electricity: KW TOTAL = KW per machine × quantity
@@ -130,8 +133,10 @@ export default function CartDetailPage() {
       let rawGasHotWater = 0;
       let rawGasDryer = 0;
       let rawGasIroner = 0;
+      let rawGasWaterHeater = 0;
       let dryerGasPerDay = 0;
       let ironerGasPerDay = 0;
+      let waterHeaterGasPerDay = 0;
 
       if (cat.includes("WASHER") && machine.hotWater?.waterConsump) {
         rawGasHotWater =
@@ -153,6 +158,14 @@ export default function CartDetailPage() {
         rawGasIroner = ironerKgPerHour * qty * operatingHours;
         ironerGasPerDay = rawGasIroner;
         gasUsage = ironerGasPerDay;
+      } else if (isWaterHeater) {
+        // Water Heater: KGS/HR * qty * operatingHours for daily consumption
+        // Use gas.btuConsumption if available, otherwise fallback to gasBTU
+        const btuPerHr = parseFloat(machine.gas?.btuConsumption) || parseFloat(machine.gasBTU) || 0;
+        const waterHeaterKgPerHour = getGasKgPerHour(btuPerHr);
+        rawGasWaterHeater = waterHeaterKgPerHour * qty * operatingHours;
+        waterHeaterGasPerDay = rawGasWaterHeater;
+        gasUsage = waterHeaterGasPerDay;
       }
       
 let washerGasPerLoad = 0;
@@ -190,11 +203,13 @@ if (cat.includes("WASHER") && machine.hotWater?.waterConsump) {
 
         dryerGasPerDay,
         ironerGasPerDay,
+        waterHeaterGasPerDay,
 
         rawElectricity: electricUsagePerDay,
         rawGasHotWater,
         rawGasDryer,
         rawGasIroner,
+        rawGasWaterHeater,
         rawColdWater: coldUsage,
         rawHotWater: hotUsage,
       };
@@ -231,8 +246,10 @@ acc.washerGasCostPerDay += c.washerGasCostPerDay || 0;
           acc.rawGasHotWater += c.rawGasHotWater;
           acc.rawGasDryer += c.rawGasDryer;
           acc.rawGasIroner += c.rawGasIroner; // ✅
+          acc.rawGasWaterHeater += c.rawGasWaterHeater || 0;
           acc.dryerGasPerDay += c.dryerGasPerDay || 0;
           acc.ironerGasPerDay += c.ironerGasPerDay || 0;
+          acc.waterHeaterGasPerDay += c.waterHeaterGasPerDay || 0;
           acc.rawColdWater += c.rawColdWater;
           acc.rawHotWater += c.rawHotWater;
           return acc;
@@ -256,6 +273,8 @@ acc.washerGasCostPerDay += c.washerGasCostPerDay || 0;
           rawGasHotWater: 0,
           rawGasDryer: 0, 
           rawGasIroner: 0, // ✅ initialize
+          rawGasWaterHeater: 0,
+          waterHeaterGasPerDay: 0,
           rawColdWater: 0, 
           rawHotWater: 0,
         }
@@ -285,7 +304,8 @@ acc.washerGasCostPerDay += c.washerGasCostPerDay || 0;
       rawElectricity: c.rawElectricity,
       rawGasHotWater: c.rawGasHotWater,
       rawGasDryer: c.rawGasDryer,
-      rawGasIroner: c.rawGasIroner,   // <-- added this
+      rawGasIroner: c.rawGasIroner,
+      rawGasWaterHeater: c.rawGasWaterHeater || 0,
       rawColdWater: c.rawColdWater,
       rawHotWater: c.rawHotWater,
 
@@ -710,6 +730,7 @@ const COLORS = {
                       { name: "Gas - Washer", value: totals.rawGasHotWater, fill: COLORS.usage.gasWasher },
                       { name: "Gas - Dryer", value: totals.rawGasDryer, fill: COLORS.usage.gasDryer },
                       { name: "Gas - Ironer", value: totals.rawGasIroner, fill: COLORS.usage.gasIroner },
+                      ...(totals.rawGasWaterHeater > 0 ? [{ name: "Gas - Water Heater", value: totals.rawGasWaterHeater, fill: COLORS.usage.gasWaterHeater || "#10b981" }] : []),
                       { name: "Cold Water", value: totals.rawColdWater, fill: COLORS.usage.waterCold },
                       { name: "Hot Water", value: totals.rawHotWater, fill: COLORS.usage.waterHot },
                     ]
@@ -775,6 +796,9 @@ const COLORS = {
                 <Bar dataKey="rawGasHotWater" fill={COLORS.usage.gasWasher} name="Washer Gas Usage" />
                 <Bar dataKey="rawGasDryer" fill={COLORS.usage.gasDryer} name="Dryer Gas Usage" />
                 <Bar dataKey="rawGasIroner" fill={COLORS.usage.gasIroner} name="Ironer Gas Usage" />
+                {barData.some(d => d.rawGasWaterHeater > 0) && (
+                  <Bar dataKey="rawGasWaterHeater" fill="#10b981" name="Water Heater Gas Usage" />
+                )}
                 <Bar dataKey="rawColdWater" fill={COLORS.usage.waterCold} name="Cold Water Usage" />
                 <Bar dataKey="rawHotWater" fill={COLORS.usage.waterHot} name="Hot Water Usage" />
               </>
@@ -844,6 +868,12 @@ const COLORS = {
                     <p className="text-xs text-gray-500">
                       Ironer: {totals.rawGasIroner.toFixed(2)} kg / day
                     </p>
+                    {/* Water Heater */}
+                    {totals.rawGasWaterHeater > 0 && (
+                      <p className="text-xs text-gray-500">
+                        Water Heater: {totals.rawGasWaterHeater.toFixed(2)} kg / day
+                      </p>
+                    )}
                   </div>
 
                 </div>
