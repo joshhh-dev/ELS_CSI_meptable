@@ -17,6 +17,16 @@ const formatCurrency = (value) =>
 // Conversion constants
 const BTU_TO_KG_GAS = 47654.2;
 const GAS_EFFICIENCY = 0.6;
+const TIME_LOAD = 0.17; // hours per load
+const LPG_TANK_KG = 50; // kilograms per LPG tank
+const LPG_COST_PER_TANK = 4000; // PHP per 50kg tank
+const LPG_COST_PER_KG = LPG_COST_PER_TANK / LPG_TANK_KG; // PHP per kg (80)
+
+// Calculate KGS/HR from BTU/HR using formula: BTU/HR / (47654.2 * 10)
+const getGasKgPerHour = (btu = 0) => btu / (BTU_TO_KG_GAS * 10);
+
+// Calculate KGS per load using TIME_LOAD
+const getGasKgPerLoad = (btu = 0) => getGasKgPerHour(btu) * TIME_LOAD;
 
 // Helper to get rate key based on category
 const getRateKey = (category) => {
@@ -61,6 +71,22 @@ export default function UserRatesInput({ categoryRates, setCategoryRates, items,
       setCategoryRates((prev) => ({
         ...prev,
         ironer_hours: isNaN(num) ? 0 : Math.max(0, num),
+      }));
+    };
+
+    const handleLpgCostChange = (e) => {
+      const value = e.target.value;
+      setCategoryRates((prev) => ({
+        ...prev,
+        lpg_cost_per_kg: value,
+      }));
+    };
+
+    const handleLpgCostBlur = (e) => {
+      const num = parseFloat(e.target.value);
+      setCategoryRates((prev) => ({
+        ...prev,
+        lpg_cost_per_kg: isNaN(num) ? 80 : Math.max(0, num),
       }));
     };
 
@@ -120,6 +146,10 @@ const waterRate = parseFloat(rates.water) || 0;
 // Gas cost per load
 let gasCost = 0;
 let washerGasCostPerLoad = 0;
+let dryerGasKgPerHour = 0;
+let dryerGasKgPerLoad = 0;
+let ironerGasKgPerHour = 0;
+let ironerGasKgPerLoad = 0;
 
 // Washer: per-load kg × gas rate
 if (isWasher) {
@@ -133,17 +163,24 @@ if (isWasher) {
   gasCost = (washerGasCostPerLoad|| 0) * gasRate * qty;
 }
 
-// Dryer / Ironer: BTU → kg × efficiency × gas rate
-// For Ironers, divide by operating hours to get per-load cost
+// Dryer: Calculate KGS/HR and KGS per load using new formula
 if (isDryer) {
+  const btuPerHr = parseFloat(machine.gasBTU) || 0;
+  dryerGasKgPerHour = getGasKgPerHour(btuPerHr);
+  // For dryer: KGS per Load = KGS/HR * Qty
+  dryerGasKgPerLoad = dryerGasKgPerHour * qty;
   const gasRate = parseFloat(rates.gas) || 0;
-  gasCost = ((parseFloat(machine.gasBTU) || 0) / BTU_TO_KG_GAS) * GAS_EFFICIENCY * gasRate * qty;
+  gasCost = dryerGasKgPerLoad * gasRate;
 }
 
+// Ironer: Calculate KGS/HR and KGS per load 
 if (isIroner) {
+  const btuPerHr = parseFloat(machine.gasBTU) || 0;
+  ironerGasKgPerHour = getGasKgPerHour(btuPerHr);
+  // For ironer: KGS per Load = KGS/HR * Qty (per-load value)
+  ironerGasKgPerLoad = ironerGasKgPerHour * qty;
   const gasRate = parseFloat(rates.gas) || 0;
-  const gasPerDay = ((parseFloat(machine.gasBTU) || 0) / BTU_TO_KG_GAS) * GAS_EFFICIENCY * gasRate * qty * operatingHours;
-  gasCost = operatingHours > 0 ? gasPerDay / operatingHours : 0; // Divide to get per-load cost
+  gasCost = ironerGasKgPerLoad * gasRate;
 }
 
     return {
@@ -151,41 +188,26 @@ if (isIroner) {
   waterCold: isWasher ? coldUsage * waterRate : 0,
   waterHot: isWasher ? hotUsage * waterRate : 0,
       gas: gasCost,
+      dryerGasKgPerHour,
+      dryerGasKgPerLoad,
+      ironerGasKgPerHour,
+      ironerGasKgPerLoad,
     };
   };
 
   // Memoize grouped items by category for performance
   const groupedItems = useMemo(() => groupItemsByCategory(items), [items]);
 
+  const lpgCostPerKg = parseFloat(categoryRates.lpg_cost_per_kg) || 80;
+
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold"> Utility Rates & Machine Consumption</h2>
-
-      {/* Ironer Operating Hours */}
-      <div className="p-5 rounded-2xl shadow-lg border border-gray-200 bg-gradient-to-br from-blue-50 to-blue-100">
-        <label htmlFor="ironer-hours" className="flex flex-col text-sm font-medium text-gray-700">
-          Ironer Operating Hours (hours/day)
-          <input
-            id="ironer-hours"
-            type="number"
-            step="0.5"
-            min="0"
-            value={categoryRates.ironer_hours ?? ""}
-            onChange={handleIronerHoursChange}
-            onBlur={handleIronerHoursBlur}
-            className="mt-1 w-32 rounded-lg border-gray-300 shadow-sm
-                       focus:border-indigo-500 focus:ring focus:ring-indigo-200 px-3 py-2 text-sm"
-            aria-describedby="ironer-hours-desc"
-          />
-          <span id="ironer-hours-desc" className="sr-only">
-            Enter the operating hours per day for ironer machines
-          </span>
-        </label>
-      </div>
+      <h2 className="text-xl font-bold">Utility Rates & Machine Consumption</h2>
 
       {Object.entries(groupedItems).map(([category, machines]) => {
         const rateKey = getRateKey(category);
         const utilities = getUtilitiesByCategory(category);
+        const isIronerCategory = category.toUpperCase().includes("IRONERS");
 
         return (
           <section
@@ -196,6 +218,30 @@ if (isIroner) {
             <h3 id={`category-${category}`} className="text-lg font-semibold text-gray-800 mb-4">
               {category}
             </h3>
+
+            {/* Ironer Operating Hours - only for Ironers category */}
+            {isIronerCategory && (
+              <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                <label htmlFor="ironer-hours" className="flex flex-col text-sm font-medium text-gray-700">
+                  Operating Hours (hours/day)
+                  <input
+                    id="ironer-hours"
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={categoryRates.ironer_hours ?? ""}
+                    onChange={handleIronerHoursChange}
+                    onBlur={handleIronerHoursBlur}
+                    className="mt-1 w-32 rounded-lg border-gray-300 shadow-sm
+                               focus:border-indigo-500 focus:ring focus:ring-indigo-200 px-3 py-2 text-sm"
+                    aria-describedby="ironer-hours-desc"
+                  />
+                  <span id="ironer-hours-desc" className="sr-only">
+                    Enter the operating hours per day for ironer machines
+                  </span>
+                </label>
+              </div>
+            )}
 
             {/* Utility Rate Inputs */}
             <div className="flex flex-wrap gap-6 mb-6">
@@ -238,6 +284,7 @@ if (isIroner) {
               const isWasher = catUpper.includes("WASHER");
               const isDryer = catUpper.includes("DRYER");
               const isIroner = catUpper.includes("IRONERS");
+              const machineRates = categoryRates[rateKey] || {};
 
               return (
                 <article
@@ -265,6 +312,22 @@ if (isIroner) {
                         <>
                           <p>Cold Water Cost per Load: {formatCurrency(cost.waterCold)}</p>
                           <p>Hot Water Cost per Load: {formatCurrency(cost.waterHot)}</p>
+                        </>
+                      )}
+                      {isDryer && (
+                        <>
+                          <p className="font-semibold text-blue-600">Gas KGS/HR: {cost.dryerGasKgPerHour?.toFixed(3)} kg/hr</p>
+                          <p className="font-semibold text-blue-600">Gas KGS per Load: {cost.dryerGasKgPerLoad?.toFixed(3)} kg</p>
+                          <p className="font-semibold text-blue-600">LPG Cost per Load: {formatCurrency(cost.dryerGasKgPerLoad * lpgCostPerKg)}</p>
+                          <p className="text-xs text-gray-500">(Based on ₱{lpgCostPerKg}/kg)</p>
+                        </>
+                      )}
+                      {isIroner && (
+                        <>
+                          <p className="font-semibold text-green-600">Gas KGS/HR: {cost.ironerGasKgPerHour?.toFixed(3)} kg/hr</p>
+                          <p className="font-semibold text-green-600">Gas KGS per Load: {cost.ironerGasKgPerLoad?.toFixed(3)} kg</p>
+                          <p className="font-semibold text-green-600">LPG Cost per Load: {formatCurrency((cost.ironerGasKgPerLoad / (machine.quantity || 1)) * (parseFloat(machineRates.gas) || 80))}</p>
+                          <p className="text-xs text-gray-500">(Based on ₱{parseFloat(machineRates.gas) || 80}/kg)</p>
                         </>
                       )}
                       {(isWasher || isDryer || isIroner) && (

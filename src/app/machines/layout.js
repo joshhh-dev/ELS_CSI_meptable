@@ -15,6 +15,7 @@ export default function MachinesLayout({ children }) {
     { href: "/machines/washer", label: "Washer" },
     { href: "/machines/dryer", label: "Dryer" },
     { href: "/machines/ironer", label: "Ironer" },
+    { href: "/machines/waterheater", label: "Water Heater" }
   ];
 
   return (

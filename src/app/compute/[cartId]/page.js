@@ -22,6 +22,18 @@ const formatCurrency = (value) =>
 // Conversion constants
 const BTU_TO_KG_GAS = 47654.2;
 const GAS_EFFICIENCY = 0.6;
+const TIME_LOAD = 0.17;
+const LPG_TANK_KG = 50; // kilograms per LPG tank
+const LPG_COST_PER_TANK = 4000; // PHP per 50kg tank
+
+// Calculate KGS/HR from BTU/HR using formula: BTU/HR / (47654.2 * 10)
+const getGasKgPerHour = (btu = 0) =>
+  btu / (BTU_TO_KG_GAS * 10);
+
+// Calculate KGS per load using TIME_LOAD
+const getGasKgPerLoad = (btu = 0) =>
+  getGasKgPerHour(btu) * TIME_LOAD;
+
 
 const COLORS = ["#4f46e5", "#f97316", "#0ea5e9", "#f43f5e"];
 
@@ -106,23 +118,29 @@ export default function CartDetailPage() {
       let rawGasHotWater = 0;
       let rawGasDryer = 0;
       let rawGasIroner = 0;
+      let dryerGasPerDay = 0;
+      let ironerGasPerDay = 0;
 
       if (cat.includes("WASHER") && machine.hotWater?.waterConsump) {
         rawGasHotWater =
           ((parseFloat(machine.hotWater?.waterConsump) || 0) * 8.34 * HOT_WATER_TEMP_RISE) /
-          46452 *
+          47654.2 *
           qty *
           operatingHours;
           
         gasUsage = rawGasHotWater;
       } else if (cat.includes("DRYER")) {
-        rawGasDryer =
-          ((parseFloat(machine.gasBTU) || 0) / BTU_TO_KG_GAS) * GAS_EFFICIENCY * qty * operatingHours;
-        gasUsage = rawGasDryer;
+        // Dryer: KGS/HR * qty * operatingHours for daily consumption
+        const dryerKgPerHour = getGasKgPerHour(parseFloat(machine.gasBTU) || 0);
+        rawGasDryer = dryerKgPerHour * qty * operatingHours;
+        dryerGasPerDay = rawGasDryer;
+        gasUsage = dryerGasPerDay;
       } else if (cat.includes("IRONER")) {
-        rawGasIroner =
-          ((parseFloat(machine.gasBTU) || 0) / BTU_TO_KG_GAS) * GAS_EFFICIENCY * qty * operatingHours;
-        gasUsage = rawGasIroner;
+        // Ironer: KGS/HR * qty * operatingHours for daily consumption (respects ironer-specific hours)
+        const ironerKgPerHour = getGasKgPerHour(parseFloat(machine.gasBTU) || 0);
+        rawGasIroner = ironerKgPerHour * qty * operatingHours;
+        ironerGasPerDay = rawGasIroner;
+        gasUsage = ironerGasPerDay;
       }
       
 let washerGasPerLoad = 0;
@@ -135,7 +153,7 @@ if (cat.includes("WASHER") && machine.hotWater?.waterConsump) {
     ((parseFloat(machine.hotWater.waterConsump) || 0) *
       8.34 *
       HOT_WATER_TEMP_RISE) /
-    46452;
+    47654.2;
 
   washerGasPerDay = washerGasPerLoad * qty * operatingHours;
   washerGasCostPerLoad = washerGasPerLoad * (rates.gas || 0);
@@ -149,10 +167,13 @@ if (cat.includes("WASHER") && machine.hotWater?.waterConsump) {
         waterHot: hotUsage * (rates.water || 0),
         gas: gasUsage * (rates.gas || 0),
 
- washerGasPerLoad,
-  washerGasPerDay,
-  washerGasCostPerLoad,
-  washerGasCostPerDay,
+        washerGasPerLoad,
+        washerGasPerDay,
+        washerGasCostPerLoad,
+        washerGasCostPerDay,
+
+        dryerGasPerDay,
+        ironerGasPerDay,
 
         rawElectricity: electricUsagePerLoad,
         rawGasHotWater,
@@ -191,6 +212,8 @@ acc.washerGasCostPerDay += c.washerGasCostPerDay || 0;
           acc.rawGasHotWater += c.rawGasHotWater;
           acc.rawGasDryer += c.rawGasDryer;
           acc.rawGasIroner += c.rawGasIroner; // ✅
+          acc.dryerGasPerDay += c.dryerGasPerDay || 0;
+          acc.ironerGasPerDay += c.ironerGasPerDay || 0;
           acc.rawColdWater += c.rawColdWater;
           acc.rawHotWater += c.rawHotWater;
           return acc;
@@ -201,8 +224,11 @@ acc.washerGasCostPerDay += c.washerGasCostPerDay || 0;
           waterHot: 0, 
           gas: 0,
 
-         washerGasPerDay: 0,
-          washerGasCostPerDay: 0, 
+          washerGasPerDay: 0,
+          washerGasCostPerDay: 0,
+
+          dryerGasPerDay: 0,
+          ironerGasPerDay: 0,
 
           rawElectricity: 0, 
           rawGasHotWater: 0,
