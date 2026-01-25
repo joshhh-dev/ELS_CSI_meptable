@@ -28,23 +28,40 @@ const getGasKgPerHour = (btu = 0) => btu / (BTU_TO_KG_GAS * 10);
 // Calculate KGS per load using TIME_LOAD
 const getGasKgPerLoad = (btu = 0) => getGasKgPerHour(btu) * TIME_LOAD;
 
+const normalizeCategory = (category = "") =>
+  category.toUpperCase().trim();
+
+const isWasherCat = (cat) => cat.includes("WASHER");
+const isDryerCat = (cat) => cat.includes("DRYER");
+const isIronerCat = (cat) => cat.includes("IRONER");
+const isWaterHeaterCat = (cat) =>
+  cat.includes("WATER HEATERS") || cat.includes("WATERHEATERS");
+
 // Helper to get rate key based on category
-const getRateKey = (category) => {
-  const catUpper = category.toUpperCase();
-  if (catUpper.includes("WASHER")) return `washer_${category}`;
-  if (catUpper.includes("DRYER")) return `dryer_${category}`;
-  if (catUpper.includes("IRONERS")) return `ironers_${category}`;
-  if (catUpper.includes("WATER HEATER") || catUpper.includes("WATERHEATER")) return `waterheater_${category}`;
+const getRateKey = (category = "") => {
+  const cat = normalizeCategory(category);
+
+  if (isWasherCat(cat)) return `washer_${category}`;
+  if (isDryerCat(cat)) return `dryer_${category}`;
+  if (isIronerCat(cat)) return `ironers_${category}`;
+  if (isWaterHeaterCat(cat)) return `waterheater_${category}`;
+
   return category;
 };
 
+
+
 // Helper to get applicable utilities based on category
-const getUtilitiesByCategory = (category) => {
-  const catUpper = category.toUpperCase();
-  if (catUpper.includes("WASHER")) return ["electricity", "water", "gas"];
-  if (catUpper.includes("DRYER") || catUpper.includes("IRONERS") || catUpper.includes("WATER HEATER") || catUpper.includes("WATERHEATER")) return ["electricity", "gas"];
+const getUtilitiesByCategory = (category = "") => {
+  const cat = normalizeCategory(category);
+
+  if (isWasherCat(cat)) return ["electricity", "water"];
+  if (isDryerCat(cat) || isIronerCat(cat)) return ["electricity", "gas"];
+  if (isWaterHeaterCat(cat)) return ["gas"];
+
   return ["electricity", "water", "gas"];
 };
+
 
 export default function UserRatesInput({ categoryRates, setCategoryRates, items, setItems, hour }) {
   // Handle changes to utility rates inputs
@@ -67,11 +84,27 @@ export default function UserRatesInput({ categoryRates, setCategoryRates, items,
       }));
     };
 
+    const handleWaterHeaterHoursChange = (e) => {
+      const value = e.target.value;
+      setCategoryRates((prev) => ({
+        ...prev,
+        waterheater_hours: value,
+      }));
+    }; 
+
     const handleIronerHoursBlur = (e) => {
       const num = parseFloat(e.target.value);
       setCategoryRates((prev) => ({
         ...prev,
         ironer_hours: isNaN(num) ? 0 : Math.max(0, num),
+      }));
+    };
+
+      const handleWaterHeaterHoursBlur = (e) => {
+      const num = parseFloat(e.target.value);
+      setCategoryRates((prev) => ({
+        ...prev,
+        waterheater_hours: isNaN(num) ? 0 : Math.max(0, num),
       }));
     };
 
@@ -126,12 +159,16 @@ export default function UserRatesInput({ categoryRates, setCategoryRates, items,
     const ratesKey = getRateKey(machine.category);
     const rates = categoryRates[ratesKey] || {};
 
-    // Use ironer-specific hours if available for ironers, otherwise use general hour
-    const isWasher = catUpper.includes("WASHER");
-    const isDryer = catUpper.includes("DRYER");
-    const isIroner = catUpper.includes("IRONERS");
-    const isWaterHeater = catUpper.includes("WATER HEATER") || catUpper.includes("WATERHEATER");
-    const operatingHours = isIroner && categoryRates.ironer_hours ? categoryRates.ironer_hours : hour;
+    // Use ironer-specific hours and water heater specific hours if available for ironers, otherwise use general hour
+const isWasher = isWasherCat(catUpper);
+const isDryer = isDryerCat(catUpper);
+const isIroner = isIronerCat(catUpper);
+const isWaterHeater = isWaterHeaterCat(catUpper);
+
+  const operatingHours =
+    (isIroner && categoryRates.ironer_hours) ||
+    (isWaterHeater && categoryRates.waterheater_hours) ||
+    hour;
   
     // Electricity: KW TOTAL = KW per machine × quantity
     // Use aveElecConsump instead of totalLoad for electricity calculation
@@ -161,7 +198,7 @@ if (isWasher) {
     ((parseFloat(machine.hotWater?.waterConsump) || 0) *
       8.34 *
       60) /
-    46452;
+    BTU_TO_KG_GAS;
 
   const gasRate = parseFloat(rates.gas) || 0;
   gasCost = (washerGasCostPerLoad|| 0) * gasRate * qty;
@@ -201,14 +238,16 @@ if (isWaterHeater) {
 }
 
     return {
-      electricity: kwTotal * (rates.electricity || 0),
-  waterCold: isWasher ? coldUsage * waterRate : 0,
-  waterHot: isWasher ? hotUsage * waterRate : 0,
-      gas: gasCost,
-      dryerGasKgPerHour,
-      dryerGasKgPerLoad,
-      ironerGasKgPerHour,
-      ironerGasKgPerLoad,
+    electricity: kwTotal * (rates.electricity || 0),
+    waterCold: isWasher ? coldUsage * waterRate : 0,
+    waterHot: isWasher ? hotUsage * waterRate : 0,
+    gas: gasCost,
+    dryerGasKgPerHour,
+    dryerGasKgPerLoad,
+    ironerGasKgPerHour,
+    ironerGasKgPerLoad,
+    waterHeaterGasKgPerHour,
+    waterHeaterGasKgPerLoad,
     };
   };
 
@@ -225,6 +264,7 @@ if (isWaterHeater) {
         const rateKey = getRateKey(category);
         const utilities = getUtilitiesByCategory(category);
         const isIronerCategory = category.toUpperCase().includes("IRONERS");
+        const isWaterHeater = category.toUpperCase().includes("WATER HEATER") || category.toUpperCase().includes("WATERHEATER"); 
 
         return (
           <section
@@ -259,6 +299,31 @@ if (isWaterHeater) {
                 </label>
               </div>
             )}
+
+            {/* Water Heater Operating Hours - only for Water Heater category */}
+            {isWaterHeater && (
+              <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                <label htmlFor="waterheater-hours" className="flex flex-col text-sm font-medium text-gray-700">
+                  Operating Hours (hours/day)
+                  <input
+                    id="waterheater-hours"
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={categoryRates.waterheater_hours ?? ""}
+                    onChange={handleWaterHeaterHoursChange}
+                    onBlur={handleWaterHeaterHoursBlur}
+                    className="mt-1 w-32 rounded-lg border-gray-300 shadow-sm
+                               focus:border-indigo-500 focus:ring focus:ring-indigo-200 px-3 py-2 text-sm"
+                    aria-describedby="waterheater-hours-desc"
+                  />
+                  <span id="waterheater-hours-desc" className="sr-only">
+                    Enter the operating hours per day for water heater machines
+                  </span>
+                </label>
+              </div>
+            )}
+
 
             {/* Utility Rate Inputs */}
             <div className="flex flex-wrap gap-6 mb-6">
@@ -297,11 +362,12 @@ if (isWaterHeater) {
             {/* Machine List */}
             {machines.map((machine, idx) => {
               const cost = calculateCostPerLoad(machine);
-              const catUpper = category.toUpperCase();
-              const isWasher = catUpper.includes("WASHER");
-              const isDryer = catUpper.includes("DRYER");
-              const isIroner = catUpper.includes("IRONERS");
-              const isWaterHeater = catUpper.includes("WATER HEATER") || catUpper.includes("WATERHEATER");
+const catUpper = normalizeCategory(category);
+const isWasher = isWasherCat(catUpper);
+const isDryer = isDryerCat(catUpper);
+const isIroner = isIronerCat(catUpper);
+const isWaterHeater = isWaterHeaterCat(catUpper);
+
               const machineRates = categoryRates[rateKey] || {};
 
               return (

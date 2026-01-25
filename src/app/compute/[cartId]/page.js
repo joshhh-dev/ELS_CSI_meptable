@@ -30,9 +30,13 @@ const LPG_COST_PER_TANK = 4000; // PHP per 50kg tank
 const getGasKgPerHour = (btu = 0) =>
   btu / (BTU_TO_KG_GAS * 10);
 
-// Calculate KGS per load using TIME_LOAD
-const getGasKgPerLoad = (btu = 0) =>
-  getGasKgPerHour(btu) * TIME_LOAD;
+/**
+ * Converts BTU/hr to kg of LPG per load
+ * @param {number} btuPerHr - machine BTU/hr rating
+ * @param {number} hoursPerLoad - load duration in hours
+ */
+const getGasKgPerLoad = (btuPerHr = 0, hoursPerLoad = TIME_LOAD) =>
+  getGasKgPerHour(btuPerHr) * hoursPerLoad;
 
 
 const COLORS = ["#4f46e5", "#f97316", "#0ea5e9", "#f43f5e"];
@@ -45,7 +49,7 @@ export default function CartDetailPage() {
 
   const [cart, setCart] = useState(null);
   const [items, setItems] = useState([]);
-  const [hour, setHour] = useState();
+  const [hour, setHour] = useState(0);
   const [loading, setLoading] = useState(false);
   const [categoryRates, setCategoryRates] = useState({});
 
@@ -74,8 +78,18 @@ export default function CartDetailPage() {
 
   const HOT_WATER_TEMP_RISE = 60; // °C
 
+  const normalizeCategory = (category = "") => category.toUpperCase().trim();
+
+const isWasher = (cat) => cat.includes("WASHER");
+const isDryer = (cat) => cat.includes("DRYER");
+const isIroner = (cat) => cat.includes("IRONER");
+const isWaterHeater = (cat) =>
+  cat.includes("WATER HEATERS") || cat.includes("WATERHEATERS");
+
   const calculateCostPerLoad = useCallback(
     (machine) => {
+
+      
       const qty = machine.quantity || 0;
       if (!qty || !hour)
         return { 
@@ -88,33 +102,41 @@ export default function CartDetailPage() {
           kwTotal: 0
         };
 
-      const cat = machine.category.toUpperCase();
-      const ratesKey =
-        cat.includes("WASHER")
-          ? `washer_${machine.category}`
-          : cat.includes("DRYER")
-          ? `dryer_${machine.category}`
-          : cat.includes("IRONER")
-          ? `ironers_${machine.category}`
-          : cat.includes("WATER HEATER") || cat.includes("WATERHEATER")
-          ? `waterheater_${machine.category}`
-          : machine.category;
+const cat = normalizeCategory(machine.category);
+const ratesKey =
+  isWasher(cat)
+    ? `washer_${machine.category}`
+    : isDryer(cat)
+    ? `dryer_${machine.category}`
+    : isIroner(cat)
+    ? `ironers_${machine.category}`
+    : isWaterHeater(cat)
+    ? `waterheater_${machine.category}`
+    : machine.category;
+
 
       const rates = categoryRates[ratesKey] || {};
 
-      // Use ironer-specific hours if available for ironers, otherwise use general hour
-      const isIroner = cat.includes("IRONER");
-      const isWaterHeater = cat.includes("WATER HEATER") || cat.includes("WATERHEATER");
-      const operatingHours = isIroner && categoryRates.ironer_hours ? categoryRates.ironer_hours : hour;
+      // Use ironer-specific hours and water heater specific hours if available for ironers, otherwise use general hour
+const operatingHours =
+  isIroner(cat) && categoryRates.ironer_hours
+    ? categoryRates.ironer_hours
+    : isWaterHeater(cat) && categoryRates.waterheater_hours
+    ? categoryRates.waterheater_hours
+    : hour;
+
 
       // Electricity: KW TOTAL = KW per machine × quantity
       // Use aveElecConsump instead of totalLoad for electricity calculation
-      const kwPerMachine = parseFloat(machine.aveElecConsump) || 0;
-      const kwTotal = kwPerMachine * qty; // Total KW = KW × QTY (no hours)
-      // Cost per load = KW TOTAL × cost per KW-HR
-      const costPerLoad = kwTotal * (rates.electricity || 0);
-      // Total cost per day = Cost per load × operating hours
-      const electricUsagePerDay = kwTotal * operatingHours; // kWh per day for usage display
+const kwPerMachine = parseFloat(machine.aveElecConsump) || 0;
+const operatingHoursSafe = parseFloat(operatingHours) || 0;
+const ratePerKWh = parseFloat(rates.electricity) || 0;
+
+const kwTotal = kwPerMachine * qty; // kW total for all machines
+const electricUsagePerDay = kwTotal * operatingHoursSafe; // kWh per day
+const electricityCost = electricUsagePerDay * ratePerKWh; // PHP per day
+
+ // kWh per day for usage display
 
       // Water
       const coldUsage =
@@ -137,57 +159,85 @@ export default function CartDetailPage() {
       let dryerGasPerDay = 0;
       let ironerGasPerDay = 0;
       let waterHeaterGasPerDay = 0;
+      let washerGasPerLoad = 0;
 
-      if (cat.includes("WASHER") && machine.hotWater?.waterConsump) {
-        rawGasHotWater =
-          ((parseFloat(machine.hotWater?.waterConsump) || 0) * 8.34 * HOT_WATER_TEMP_RISE) /
-          47654.2 *
-          qty *
-          operatingHours;
-          
-        gasUsage = rawGasHotWater;
-      } else if (cat.includes("DRYER")) {
-        // Dryer: KGS/HR * qty * operatingHours for daily consumption
-        const dryerKgPerHour = getGasKgPerHour(parseFloat(machine.gasBTU) || 0);
-        rawGasDryer = dryerKgPerHour * qty * operatingHours;
-        dryerGasPerDay = rawGasDryer;
-        gasUsage = dryerGasPerDay;
-      } else if (cat.includes("IRONER")) {
-        // Ironer: KGS/HR * qty * operatingHours for daily consumption (respects ironer-specific hours)
-        const ironerKgPerHour = getGasKgPerHour(parseFloat(machine.gasBTU) || 0);
-        rawGasIroner = ironerKgPerHour * qty * operatingHours;
-        ironerGasPerDay = rawGasIroner;
-        gasUsage = ironerGasPerDay;
-      } else if (isWaterHeater) {
-        // Water Heater: KGS/HR * qty * operatingHours for daily consumption
-        // Use gas.btuConsumption if available, otherwise fallback to gasBTU
-        const btuPerHr = parseFloat(machine.gas?.btuConsumption) || parseFloat(machine.gasBTU) || 0;
-        const waterHeaterKgPerHour = getGasKgPerHour(btuPerHr);
-        rawGasWaterHeater = waterHeaterKgPerHour * qty * operatingHours;
-        waterHeaterGasPerDay = rawGasWaterHeater;
-        gasUsage = waterHeaterGasPerDay;
-      }
-      
-let washerGasPerLoad = 0;
+      let waterHeaterGasPerLoad = 0;
+      let waterHeaterKgPerHour = 0;
+
 let washerGasPerDay = 0;
 let washerGasCostPerLoad = 0;
 let washerGasCostPerDay = 0;
 
-if (cat.includes("WASHER") && machine.hotWater?.waterConsump) {
+if (isWasher(cat) && machine.hotWater?.waterConsump) {
   washerGasPerLoad =
     ((parseFloat(machine.hotWater.waterConsump) || 0) *
       8.34 *
       HOT_WATER_TEMP_RISE) /
-    47654.2;
+    BTU_TO_KG_GAS;
 
   washerGasPerDay = washerGasPerLoad * qty * operatingHours;
   washerGasCostPerLoad = washerGasPerLoad * (rates.gas || 0);
   washerGasCostPerDay = washerGasPerDay * (rates.gas || 0);
+
+  rawGasHotWater = washerGasPerDay;
+  gasUsage = washerGasPerDay;
+} else if (isDryer(cat)) {
+        // Dryer: KGS/HR * qty * operatingHours for daily consumption
+        const dryerKgPerHour = getGasKgPerHour(parseFloat(machine.gasBTU) || 0);
+        rawGasDryer = dryerKgPerHour * qty * operatingHours;
+        const dryerGasPerDay =
+  getGasKgPerLoad(parseFloat(machine.gasBTU) || 0, operatingHours) * qty;
+
+        gasUsage = dryerGasPerDay;
+      } else if (isIroner(cat)) {
+        // Ironer: KGS/HR * qty * operatingHours for daily consumption (respects ironer-specific hours)
+        const ironerKgPerHour = getGasKgPerHour(parseFloat(machine.gasBTU) || 0);
+        rawGasIroner = ironerKgPerHour * qty * operatingHours;
+const ironerGasPerDay =
+  getGasKgPerLoad(parseFloat(machine.gasBTU) || 0, operatingHours) * qty;
+        gasUsage = ironerGasPerDay;
+} else if (isWaterHeater(cat)) {
+  const btuPerHr = parseFloat(machine.gas?.btuConsumption) || parseFloat(machine.gasBTU) || 0;
+  
+  // ✅ assign to waterHeaterKgPerHour
+  waterHeaterKgPerHour = getGasKgPerHour(btuPerHr);
+
+  // daily gas for all units
+  waterHeaterGasPerDay = waterHeaterKgPerHour * qty * operatingHours;
+
+  // gas per load
+  const totalWHLoads = qty * operatingHours;
+  waterHeaterGasPerLoad = totalWHLoads ? waterHeaterGasPerDay / totalWHLoads : 0;
+
+  // add to totals
+  gasUsage = waterHeaterGasPerDay;
+  rawGasWaterHeater = waterHeaterGasPerDay;
 }
 
 
+
+
+      
+// let washerGasPerLoad = 0;
+// let washerGasPerDay = 0;
+// let washerGasCostPerLoad = 0;
+// let washerGasCostPerDay = 0;
+
+// if (cat.includes("WASHER") && machine.hotWater?.waterConsump) {
+//   washerGasPerLoad =
+//     ((parseFloat(machine.hotWater.waterConsump) || 0) *
+//       8.34 *
+//       HOT_WATER_TEMP_RISE) /
+//     47654.2;
+
+//   washerGasPerDay = washerGasPerLoad * qty * operatingHours;
+//   washerGasCostPerLoad = washerGasPerLoad * (rates.gas || 0);
+//   washerGasCostPerDay = washerGasPerDay * (rates.gas || 0);
+// }
+
+
       return {
-        electricity: costPerLoad * operatingHours, // Total cost per day = Cost per load × operating hours
+        electricity: electricityCost, // Total cost per day = Cost per load × operating hours
         waterCold: coldUsage * (rates.water || 0),
         waterHot: hotUsage * (rates.water || 0),
         gas: gasUsage * (rates.gas || 0),
@@ -203,6 +253,9 @@ if (cat.includes("WASHER") && machine.hotWater?.waterConsump) {
 
         dryerGasPerDay,
         ironerGasPerDay,
+
+        waterHeaterGasPerLoad,
+        waterHeaterKgPerHour,
         waterHeaterGasPerDay,
 
         rawElectricity: electricUsagePerDay,
@@ -218,6 +271,15 @@ if (cat.includes("WASHER") && machine.hotWater?.waterConsump) {
     },
     [hour, categoryRates]
   );
+
+  const totalGasPerDay = items.reduce((sum, machine) => {
+  const cost = calculateCostPerLoad(machine, hour, categoryRates);
+  return sum + (cost.gas || 0);
+}, 0);
+
+console.log("Total Gas Cost per Day:", formatCurrency(totalGasPerDay));
+
+
   const totalWasherLoads = useMemo(() => {
   return items.reduce((sum, m) => {
     if (!m.category?.toUpperCase().includes("WASHER")) return sum;
@@ -246,10 +308,13 @@ acc.washerGasCostPerDay += c.washerGasCostPerDay || 0;
           acc.rawGasHotWater += c.rawGasHotWater;
           acc.rawGasDryer += c.rawGasDryer;
           acc.rawGasIroner += c.rawGasIroner; // ✅
-          acc.rawGasWaterHeater += c.rawGasWaterHeater || 0;
           acc.dryerGasPerDay += c.dryerGasPerDay || 0;
           acc.ironerGasPerDay += c.ironerGasPerDay || 0;
-          acc.waterHeaterGasPerDay += c.waterHeaterGasPerDay || 0;
+          
+acc.rawGasWaterHeater += c.rawGasWaterHeater || 0;
+acc.waterHeaterGasPerLoad += c.waterHeaterGasPerLoad || 0;
+acc.waterHeaterGasPerDay += c.waterHeaterGasPerDay || 0;
+
           acc.rawColdWater += c.rawColdWater;
           acc.rawHotWater += c.rawHotWater;
           return acc;
@@ -274,6 +339,8 @@ acc.washerGasCostPerDay += c.washerGasCostPerDay || 0;
           rawGasDryer: 0, 
           rawGasIroner: 0, // ✅ initialize
           rawGasWaterHeater: 0,
+
+          waterHeaterGasPerLoad: 0,
           waterHeaterGasPerDay: 0,
           rawColdWater: 0, 
           rawHotWater: 0,
@@ -340,6 +407,7 @@ acc.washerGasCostPerDay += c.washerGasCostPerDay || 0;
       if (["IRONERS", "TUMBLE DRYER"].includes(m.category)) {
         return m.gasConnectionHeight ?? m.connectionHeight ?? "-";
       }
+      return "-";
     };
 
 
@@ -856,7 +924,9 @@ const COLORS = {
                       Washer: {totals.rawGasHotWater.toFixed(2)} kg / day
                     </p>
                     <p className="text-xs text-gray-500 pl-3">
-                      • Gas / load: {(totals.washerGasPerDay / totalWasherLoads || 0).toFixed(3)} kg
+                      • Gas / load: {totalWasherLoads > 0
+                      ? (totals.washerGasPerDay / totalWasherLoads).toFixed(3)
+                      : "0.00"}kg
                     </p>
 
                     {/* Dryer */}
@@ -871,7 +941,7 @@ const COLORS = {
                     {/* Water Heater */}
                     {totals.rawGasWaterHeater > 0 && (
                       <p className="text-xs text-gray-500">
-                        Water Heater: {totals.rawGasWaterHeater.toFixed(2)} kg / day
+    Water Heater: {totals.rawGasWaterHeater.toFixed(2)} kg / day
                       </p>
                     )}
                   </div>
