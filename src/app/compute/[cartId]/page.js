@@ -456,7 +456,10 @@ const exportToXLSX = async () => {
       category: (m.category || "-").toString(),
       heatSource: (m.heatSource || "-").toString(),
       totalLoad: Number(m.totalLoad || 0),
-      gasBTU: Number(m.gasBTU || 0),
+    gasBTU:
+    Number(m.gas?.btuConsumption) ||
+    Number(m.gasBTU) ||
+    0,
       coldLiters: Number(m?.coldWater?.waterConsump || 0),
       hotLiters: Number(m?.hotWater?.waterConsump || 0),
       exhaustM3h: Number(m.volumeFlow || 0),
@@ -583,6 +586,7 @@ const exportToXLSX = async () => {
         ],
       },
     ];
+
 
     // ✅ Header rows
     const header = ["Type", ...machines.map((m) => m.category), "Total Consumption"];
