@@ -26,6 +26,11 @@ const TIME_LOAD = 0.17;
 const LPG_TANK_KG = 50; // kilograms per LPG tank
 const LPG_COST_PER_TANK = 4000; // PHP per 50kg tank
 
+const DAYS_PER_MONTH = 30;   // standard estimate
+
+const MONTHS_PER_YEAR = 12;
+//const DAYS_PER_YEAR = 365;
+
 // Calculate KGS/HR from BTU/HR using formula: BTU/HR / (47654.2 * 10)
 const getGasKgPerHour = (btu = 0) =>
   btu / (BTU_TO_KG_GAS * 10);
@@ -128,14 +133,13 @@ const operatingHours =
 
       // Electricity: KW TOTAL = KW per machine × quantity
       // Use aveElecConsump instead of totalLoad for electricity calculation
-const kwPerMachine = parseFloat(machine.aveElecConsump) || 0;
+// Electricity
+const kwPerMachine = parseFloat(machine.aveElecConsump) || 0; // kW per machine per hour
+const kwTotal = kwPerMachine * qty; // kW for all machines of this type
+
 const operatingHoursSafe = parseFloat(operatingHours) || 0;
-const ratePerKWh = parseFloat(rates.electricity) || 0;
-
-const kwTotal = kwPerMachine * qty; // kW total for all machines
-const electricUsagePerDay = kwTotal * operatingHoursSafe; // kWh per day
-const electricityCost = electricUsagePerDay * ratePerKWh; // PHP per day
-
+const rawElectricity = kwTotal * operatingHoursSafe; // kWh per day
+const electricityCost = rawElectricity * (parseFloat(rates.electricity) || 0); // PHP per day
  // kWh per day for usage display
 
       // Water
@@ -258,7 +262,7 @@ const ironerGasPerDay =
         waterHeaterKgPerHour,
         waterHeaterGasPerDay,
 
-        rawElectricity: electricUsagePerDay,
+        rawElectricity,
         rawGasHotWater,
         rawGasDryer,
         rawGasIroner,
@@ -348,14 +352,39 @@ acc.waterHeaterGasPerDay += c.waterHeaterGasPerDay || 0;
       );
     }, [items, calculateCostPerLoad]);
 
+    const totalWaterCost = totals.waterCold + totals.waterHot;
+    const totalWaterUsage = totals.rawColdWater + totals.rawHotWater;
+
+    const perDay = totals.electricity + totals.gas + totalWaterCost;
+
+    const totalPerDay = {
+    electricity: totals.electricity,
+    gas: totals.gas,
+    water: totalWaterCost,
+    }
+
+    const perMonth = {
+    electricity: totalPerDay.electricity * DAYS_PER_MONTH,
+    gas: totalPerDay.gas * DAYS_PER_MONTH,
+    water: totalPerDay.water * DAYS_PER_MONTH,
+    }
+
+    const totalPerMonth = perMonth.electricity + perMonth.gas + perMonth.water;
+
+    const perYear = {
+    electricity: perMonth.electricity * MONTHS_PER_YEAR,
+    gas: perMonth.gas * MONTHS_PER_YEAR,
+    water: perMonth.water * MONTHS_PER_YEAR,
+    };
+
+    const totalPerYear = perYear.electricity + perYear.gas + perYear.water;
 
   // Pie chart data
   const pieData = useMemo(() => [
     { name: "Electricity", value: totals.electricity },
     { name: "Gas", value: totals.gas },
-    { name: "Cold Water", value: totals.waterCold },
-    { name: "Hot Water", value: totals.waterHot },
-  ], [totals]);
+  { name: "Water (Total)", value: totalWaterCost },
+  ], [totals, totalWaterCost]);
 
   // Bar chart data
   const barData = useMemo(() => items.map((m) => {
@@ -954,37 +983,117 @@ const COLORS = {
               </div>
 
               {/* Water Section */}
-              <div className="flex-1 min-w-[200px]">
-                <h3 className="font-medium text-gray-700 mb-2">Water</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  {/* Cold Water */}
-                  <div>
-                    <p className="font-medium">Cold Water</p>
-                    <p className="text-gray-900">{formatCurrency(totals.waterCold)}</p>
-                    <p className="text-xs text-gray-500">
-                      Usage: {totals.rawColdWater.toFixed(2)} m³
-                    </p>
-                  </div>
 
-                  {/* Hot Water */}
-                  <div>
-                    <p className="font-medium">Hot Wash</p>
-                    <p className="text-gray-900">{formatCurrency(totals.waterHot)}</p>
-                    <p className="text-xs text-gray-500">
-                      Usage: {totals.rawHotWater.toFixed(2)} m³ • Gas: {totals.rawGasHotWater.toFixed(2)} kg
-                    </p>
-                  </div>
-                </div>
-              </div>
+<div className="flex-1 min-w-[200px]">
+  <h3 className="font-medium text-gray-700 mb-2">Water</h3>
+
+  {/* TOTAL WATER */}
+  <div className="mb-2">
+    <p className="font-semibold text-gray-900">
+      Total Water: {formatCurrency(totalWaterCost)}
+    </p>
+    <p className="text-xs text-gray-500">
+      Usage: {(totalWaterUsage).toFixed(2)} m³
+    </p>
+  </div>
+
+  {/* BREAKDOWN */}
+  <div className="grid grid-cols-2 gap-4 text-sm border-t pt-2">
+    {/* Cold Water */}
+    <div>
+      <p className="font-medium">Cold Water</p>
+      <p className="text-gray-900">{formatCurrency(totals.waterCold)}</p>
+      <p className="text-xs text-gray-500">
+        Usage: {totals.rawColdWater.toFixed(2)} m³
+      </p>
+    </div>
+
+    {/* Hot Water */}
+    <div>
+      <p className="font-medium">Hot Water</p>
+      <p className="text-gray-900">{formatCurrency(totals.waterHot)}</p>
+      <p className="text-xs text-gray-500">
+        Usage: {totals.rawHotWater.toFixed(2)} m³
+        {totals.rawGasHotWater > 0 && (
+          <> • Gas: {totals.rawGasHotWater.toFixed(2)} kg</>
+        )}
+      </p>
+    </div>
+  </div>
+</div>
+
             </div>
 
             {/* Grand Total */}
             <div className="mt-4 p-2 bg-green-50 text-green-800 font-bold rounded text-center">
-              Grand Total (per Day):{" "}
-              {formatCurrency(
-                totals.electricity + totals.gas + totals.waterCold + totals.waterHot
-              )}
+  {/* Per Day */}
+  <div className="p-2 bg-green-50 text-green-800 font-bold rounded text-center">
+    Total Cost per Day: {formatCurrency(perDay)}
+  </div>
             </div>
+
+            <div className="p-4 border rounded bg-blue-50 shadow-sm">
+  <h2 className="font-bold text-lg mb-3 text-blue-900">
+    Total Cost per Month (by Utility)
+  </h2>
+
+  <div className="grid grid-cols-3 gap-4 text-sm">
+    <div>
+      <p className="font-medium">Electricity</p>
+      <p className="text-gray-900">{formatCurrency(perMonth.electricity)}</p>
+    </div>
+
+    <div>
+      <p className="font-medium">Gas</p>
+      <p className="text-gray-900">{formatCurrency(perMonth.gas)}</p>
+    </div>
+
+    <div>
+      <p className="font-medium">Water</p>
+      <p className="text-gray-900">{formatCurrency(perMonth.water)}</p>
+    </div>
+
+  </div>
+
+  <p className="text-xs text-gray-600 mt-2">
+    Based on 30 operating days per month
+  </p>
+  <div className="p-2 bg-green-50 text-green-800 font-bold rounded text-center">
+    Total Cost per Month: {formatCurrency(totalPerMonth)}
+  </div>
+</div>
+
+<div className="p-4 border rounded bg-purple-50 shadow-sm">
+  <h2 className="font-bold text-lg mb-3 text-purple-900">
+    Total Cost per Year (by Utility)
+  </h2>
+
+  <div className="grid grid-cols-3 gap-4 text-sm">
+    <div>
+      <p className="font-medium">Electricity</p>
+      <p className="text-gray-900">{formatCurrency(perYear.electricity)}</p>
+    </div>
+
+    <div>
+      <p className="font-medium">Gas</p>
+      <p className="text-gray-900">{formatCurrency(perYear.gas)}</p>
+    </div>
+
+    <div>
+      <p className="font-medium">Water</p>
+      <p className="text-gray-900">{formatCurrency(perYear.water)}</p>
+    </div>
+  </div>
+
+  <p className="text-xs text-gray-600 mt-2">
+    Based on 365 operating days per year
+  </p>
+
+    <div className="p-2 bg-green-50 text-green-800 font-bold rounded text-center">
+    Total Cost per Year: {formatCurrency(totalPerYear)}
+  </div>
+</div>
+
           </div>
 
 

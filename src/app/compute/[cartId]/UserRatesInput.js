@@ -238,10 +238,11 @@ if (isWaterHeater) {
 }
 
     return {
-    electricity: kwTotal * (rates.electricity || 0),
+    electricity: electricUsagePerDay * (rates.electricity || 0),
     waterCold: isWasher ? coldUsage * waterRate : 0,
     waterHot: isWasher ? hotUsage * waterRate : 0,
     gas: gasCost,
+    electricUsagePerDay,
     dryerGasKgPerHour,
     dryerGasKgPerLoad,
     ironerGasKgPerHour,
@@ -284,7 +285,7 @@ if (isWaterHeater) {
                   <input
                     id="ironer-hours"
                     type="number"
-                    step="0.5"
+                    step="0.01"
                     min="0"
                     value={categoryRates.ironer_hours ?? ""}
                     onChange={handleIronerHoursChange}
@@ -308,7 +309,7 @@ if (isWaterHeater) {
                   <input
                     id="waterheater-hours"
                     type="number"
-                    step="0.5"
+                    step="0.01"
                     min="0"
                     value={categoryRates.waterheater_hours ?? ""}
                     onChange={handleWaterHeaterHoursChange}
@@ -343,7 +344,7 @@ if (isWaterHeater) {
                     <input
                       id={`${rateKey}-${key}`}
                       type="number"
-                      step="1"
+                      step="0.01"
                       value={categoryRates[rateKey]?.[key] ?? ""}
                       onChange={handleRateChange(rateKey, key)}
                       onBlur={handleRateBlur(rateKey, key)}
@@ -422,7 +423,7 @@ const isWaterHeater = isWaterHeaterCat(catUpper);
                           <p className="text-xs text-gray-500">(Based on ₱{lpgCostPerKg}/kg)</p>
                         </>
                       )}
-                      {(isWasher || isDryer || isIroner || isWaterHeater) && (
+                      {(isDryer || isIroner || isWaterHeater) && (
                         <p>Gas Cost per Load: {formatCurrency(cost.gas)}</p>
                       )}
                     </div>
@@ -436,7 +437,7 @@ const isWaterHeater = isWaterHeaterCat(catUpper);
                       id={`quantity-${machine.id}`}
                       type="number"
                       min="0"
-                      step="1"
+                      step="0.01"
                       value={machine.quantity ?? ""}   // allow empty string
                       onChange={(e) => {
                         const val = e.target.value;
