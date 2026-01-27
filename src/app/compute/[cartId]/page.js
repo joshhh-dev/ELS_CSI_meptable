@@ -989,8 +989,8 @@ const COLORS = {
 
   {/* TOTAL WATER */}
   <div className="mb-2">
-    <p className="font-semibold text-gray-900">
-      Total Water: {formatCurrency(totalWaterCost)}
+    <p className="font-medium text-gray-900">
+      {formatCurrency(totalWaterCost)}
     </p>
     <p className="text-xs text-gray-500">
       Usage: {(totalWaterUsage).toFixed(2)} m³
