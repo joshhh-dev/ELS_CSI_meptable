@@ -29,7 +29,7 @@ const getGasKgPerHour = (btu = 0) => btu / (BTU_TO_KG_GAS * 10);
 const getGasKgPerLoad = (btu = 0) => getGasKgPerHour(btu) * TIME_LOAD;
 
 const normalizeCategory = (category = "") =>
-  category.toUpperCase().trim();
+  String(category ?? "").toUpperCase().trim();
 
 const isWasherCat = (cat) => cat.includes("WASHER");
 const isDryerCat = (cat) => cat.includes("DRYER");
