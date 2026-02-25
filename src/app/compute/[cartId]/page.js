@@ -286,7 +286,8 @@ console.log("Total Gas Cost per Day:", formatCurrency(totalGasPerDay));
 
   const totalWasherLoads = useMemo(() => {
   return items.reduce((sum, m) => {
-    if (!m.category?.toUpperCase().includes("WASHER")) return sum;
+if (!(m.category ?? "").toUpperCase().includes("WASHER"))      
+      return sum;
     return sum + (m.quantity || 0) * (hour || 0);
   }, 0);
 }, [items, hour]);
