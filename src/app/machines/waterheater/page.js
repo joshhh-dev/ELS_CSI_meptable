@@ -73,9 +73,6 @@ export default function WaterHeaterPage() {
                 {machine.model}
               </h2>
               <p className="text-sm text-gray-600">
-                Capacity: <span className="font-medium">{machine.capacity}</span>
-              </p>
-              <p className="text-sm text-gray-600">
                 Heat Type: <span className="font-medium">{machine.heatSource}</span>
               </p>
               <p className="text-sm text-gray-500 mt-2 line-clamp-2">

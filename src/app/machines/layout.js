@@ -7,6 +7,7 @@ import ProtectedRoute from "../component/ProtectedRoute";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
+import { href } from "react-router-dom";
 
 export default function MachinesLayout({ children }) {
   const pathname = usePathname();
@@ -15,7 +16,9 @@ export default function MachinesLayout({ children }) {
     { href: "/machines/washer", label: "Washer" },
     { href: "/machines/dryer", label: "Dryer" },
     { href: "/machines/ironer", label: "Ironer" },
-    { href: "/machines/waterheater", label: "Water Heater" }
+    { href: "/machines/waterheater", label: "Water Heater" },
+    { href: "/machines/waterStorage", label: "Water Storage"},
+    { href: "/machines/pressureTank", label: "Pressure Tank"},
   ];
 
   return (

@@ -221,6 +221,7 @@ const ironerGasPerDay =
 
 
 
+
       
 // let washerGasPerLoad = 0;
 // let washerGasPerDay = 0;
@@ -282,6 +283,9 @@ const ironerGasPerDay =
 }, 0);
 
 console.log("Total Gas Cost per Day:", formatCurrency(totalGasPerDay));
+
+
+
 
 
   const totalWasherLoads = useMemo(() => {
@@ -353,15 +357,27 @@ acc.waterHeaterGasPerDay += c.waterHeaterGasPerDay || 0;
       );
     }, [items, calculateCostPerLoad]);
 
+    
+
     const totalWaterCost = totals.waterCold + totals.waterHot;
     const totalWaterUsage = totals.rawColdWater + totals.rawHotWater;
 
+    const totalWaterLiters = totalWaterUsage * 1000; // convert back to liters for storage calculation
+
+    const operatingHours = parseFloat(hour) || 0;
+    const waterStorageUsage = (totalWaterLiters * operatingHours * 0.3)/1000; // assume 30% of daily water usage needs to be stored for peak times
+
     const perDay = totals.electricity + totals.gas + totalWaterCost;
+
+console.log("Total Water Liters", totalWaterLiters.toFixed(2), "m³/day");
+console.log("Operating Hours", operatingHours);
+console.log("Water Storage Tank Usage (m³/day):", waterStorageUsage.toFixed(2));
 
     const totalPerDay = {
     electricity: totals.electricity,
     gas: totals.gas,
     water: totalWaterCost,
+
     }
 
     const perMonth = {
@@ -407,6 +423,8 @@ acc.waterHeaterGasPerDay += c.waterHeaterGasPerDay || 0;
       rawHotWater: c.rawHotWater,
 
     };
+
+    
   }), [items, calculateCostPerLoad]);
 
   const saveCart = async () => {
@@ -1094,14 +1112,30 @@ const COLORS = {
     Total Cost per Year: {formatCurrency(totalPerYear)}
   </div>
 </div>
-
           </div>
+      {/* Water Storage Section */}
+<div className="flex-1 min-w-[200px]">
+  <h3 className="font-medium text-gray-700 mb-2">
+    Water Storage
+  </h3>
+
+  <div>
+    <p className="font-medium text-gray-900">
+      {waterStorageUsage.toFixed(2)} m³/day
+    </p>
+    <p className="text-xs text-gray-500">
+      Based on total water consumption
+    </p>
+  </div>
+</div>
 
 
       </div>
-      
+
       </div>
       
     </div>
+    
   );
+  
 }

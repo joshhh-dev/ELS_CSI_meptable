@@ -28,6 +28,9 @@ const getGasKgPerHour = (btu = 0) => btu / (BTU_TO_KG_GAS * 10);
 // Calculate KGS per load using TIME_LOAD
 const getGasKgPerLoad = (btu = 0) => getGasKgPerHour(btu) * TIME_LOAD;
 
+//Water storage tank computation
+
+
 const normalizeCategory = (category = "") =>
   String(category ?? "").toUpperCase().trim();
 

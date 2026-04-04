@@ -184,7 +184,7 @@ export default function WaterHeaterMachinePage() {
           <table className="w-full border-t border-gray-200 text-gray-700 text-sm sm:text-base">
             <tbody>
               {renderRow("Diameter", machine.gas?.diameter)}
-              {renderRow("BTU/hr", machine.gas?.btuConsumption)}
+              {renderRow("BTU/hr", machine.gasBTU)}
               {renderRow("Supply Height", machine.gas?.supplyHeight)}
             </tbody>
           </table>

@@ -45,7 +45,7 @@ export default function HomePage() {
         {/* Hero Section */}
         <section className="flex-1 flex flex-col items-center justify-center text-center px-6 animate-fadeIn gap-5">
           <h1 className="text-5xl md:text-6xl font-extrabold mb-4 text-white drop-shadow-lg">
-            Welcome to ELS
+            Welcome to Electrolux MEP
           </h1>
 
           <p className="text-lg md:text-xl max-w-2xl mb-8 opacity-90">

@@ -10,6 +10,7 @@ const collections = {
   mep_washer: "washer",
   mep_dryers: "dryer",
   mep_ironers: "ironer",
+  mep_waterHeater: "waterheater",
 };
 
 export default function SearchBar() {
