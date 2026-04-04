@@ -90,6 +90,7 @@ const isDryer = (cat) => cat.includes("DRYER");
 const isIroner = (cat) => cat.includes("IRONER");
 const isWaterHeater = (cat) =>
   cat.includes("WATER HEATERS") || cat.includes("WATERHEATERS");
+const isWaterStorage = (cat) => cat.includes("WATER STORAGE") || cat.includes("WATERSTORAGE");
 
   const calculateCostPerLoad = useCallback(
     (machine) => {
@@ -217,11 +218,6 @@ const ironerGasPerDay =
   gasUsage = waterHeaterGasPerDay;
   rawGasWaterHeater = waterHeaterGasPerDay;
 }
-
-
-
-
-
       
 // let washerGasPerLoad = 0;
 // let washerGasPerDay = 0;
@@ -283,10 +279,6 @@ const ironerGasPerDay =
 }, 0);
 
 console.log("Total Gas Cost per Day:", formatCurrency(totalGasPerDay));
-
-
-
-
 
   const totalWasherLoads = useMemo(() => {
   return items.reduce((sum, m) => {
@@ -773,9 +765,6 @@ const COLORS = {
             setItems={setItems}
             hour={hour}
           />
-
-
-
 
           {/* Actions */}
           <div className="flex flex-col gap-2 mt-4">

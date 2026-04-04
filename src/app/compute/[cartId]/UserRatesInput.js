@@ -39,6 +39,7 @@ const isDryerCat = (cat) => cat.includes("DRYER");
 const isIronerCat = (cat) => cat.includes("IRONER");
 const isWaterHeaterCat = (cat) =>
   cat.includes("WATER HEATERS") || cat.includes("WATERHEATERS");
+const isWaterStorage = (cat) => cat.includes("WATER STORAGE") || cat.includes("WATERSTORAGE");
 
 // Helper to get rate key based on category
 const getRateKey = (category = "") => {
@@ -48,10 +49,10 @@ const getRateKey = (category = "") => {
   if (isDryerCat(cat)) return `dryer_${category}`;
   if (isIronerCat(cat)) return `ironers_${category}`;
   if (isWaterHeaterCat(cat)) return `waterheater_${category}`;
+  if (isWaterStorage(cat)) return `waterStorage_${category}`;
 
   return category;
 };
-
 
 
 // Helper to get applicable utilities based on category
@@ -61,6 +62,7 @@ const getUtilitiesByCategory = (category = "") => {
   if (isWasherCat(cat)) return ["electricity", "water"];
   if (isDryerCat(cat) || isIronerCat(cat)) return ["electricity", "gas"];
   if (isWaterHeaterCat(cat)) return ["gas"];
+  if (isWaterStorage(cat)) return [];
 
   return ["electricity", "water", "gas"];
 };
@@ -269,6 +271,7 @@ if (isWaterHeater) {
         const utilities = getUtilitiesByCategory(category);
         const isIronerCategory = category.toUpperCase().includes("IRONERS");
         const isWaterHeater = category.toUpperCase().includes("WATER HEATER") || category.toUpperCase().includes("WATERHEATER"); 
+        const isWaterStorage = category.toUpperCase().includes("WATER STORAGE") || category.toUpperCase().includes("WATERSTORAGE");
 
         return (
           <section
@@ -327,6 +330,7 @@ if (isWaterHeater) {
                 </label>
               </div>
             )}
+            
 
 
             {/* Utility Rate Inputs */}
@@ -366,11 +370,11 @@ if (isWaterHeater) {
             {/* Machine List */}
             {machines.map((machine, idx) => {
               const cost = calculateCostPerLoad(machine);
-const catUpper = normalizeCategory(category);
-const isWasher = isWasherCat(catUpper);
-const isDryer = isDryerCat(catUpper);
-const isIroner = isIronerCat(catUpper);
-const isWaterHeater = isWaterHeaterCat(catUpper);
+              const catUpper = normalizeCategory(category);
+              const isWasher = isWasherCat(catUpper);
+              const isDryer = isDryerCat(catUpper);
+              const isIroner = isIronerCat(catUpper);
+              const isWaterHeater = isWaterHeaterCat(catUpper);
 
               const machineRates = categoryRates[rateKey] || {};
 
