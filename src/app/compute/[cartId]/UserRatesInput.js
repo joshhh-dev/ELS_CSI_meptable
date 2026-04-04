@@ -272,7 +272,29 @@ if (isWaterHeater) {
         const isIronerCategory = category.toUpperCase().includes("IRONERS");
         const isWaterHeater = category.toUpperCase().includes("WATER HEATER") || category.toUpperCase().includes("WATERHEATER"); 
         const isWaterStorage = category.toUpperCase().includes("WATER STORAGE") || category.toUpperCase().includes("WATERSTORAGE");
-
+  // If Water Storage, just show capacity
+  if (isWaterStorage) {
+    return (
+      <section
+        key={category}
+        className="p-5 rounded-2xl shadow-lg border border-gray-200 bg-gradient-to-br from-white to-gray-50 hover:shadow-xl transition-shadow duration-300"
+        aria-labelledby={`category-${category}`}
+      >
+        <h3 id={`category-${category}`} className="text-lg font-semibold text-gray-800 mb-4">
+          {category}
+        </h3>
+        {machines.map((machine) => (
+          <div
+            key={machine.id}
+            className="flex justify-between items-center p-3 bg-white border rounded-lg mb-3"
+          >
+            <span className="font-semibold text-gray-800">{machine.model}</span>
+            <span className="text-gray-600">Capacity: {machine.capacity || "N/A"} L</span>
+          </div>
+        ))}
+      </section>
+    );
+  }
         return (
           <section
             key={category}
@@ -330,7 +352,6 @@ if (isWaterHeater) {
                 </label>
               </div>
             )}
-            
 
 
             {/* Utility Rate Inputs */}
