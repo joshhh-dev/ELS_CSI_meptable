@@ -40,6 +40,7 @@ const isIronerCat = (cat) => cat.includes("IRONER");
 const isWaterHeaterCat = (cat) =>
   cat.includes("WATER HEATERS") || cat.includes("WATERHEATERS");
 const isWaterStorage = (cat) => cat.includes("WATER STORAGE") || cat.includes("WATERSTORAGE");
+const isPressureTank = (cat) => cat.includes("PRESSURE TANK") || cat.includes("PRESSURETANK");  
 
 // Helper to get rate key based on category
 const getRateKey = (category = "") => {
@@ -50,6 +51,7 @@ const getRateKey = (category = "") => {
   if (isIronerCat(cat)) return `ironers_${category}`;
   if (isWaterHeaterCat(cat)) return `waterheater_${category}`;
   if (isWaterStorage(cat)) return `waterStorage_${category}`;
+  if (isPressureTank(cat)) return `pressureTank_${category}`;
 
   return category;
 };
@@ -63,6 +65,7 @@ const getUtilitiesByCategory = (category = "") => {
   if (isDryerCat(cat) || isIronerCat(cat)) return ["electricity", "gas"];
   if (isWaterHeaterCat(cat)) return ["gas"];
   if (isWaterStorage(cat)) return [];
+  if (isPressureTank(cat)) return [];
 
   return ["electricity", "water", "gas"];
 };
@@ -272,6 +275,7 @@ if (isWaterHeater) {
         const isIronerCategory = category.toUpperCase().includes("IRONERS");
         const isWaterHeater = category.toUpperCase().includes("WATER HEATER") || category.toUpperCase().includes("WATERHEATER"); 
         const isWaterStorage = category.toUpperCase().includes("WATER STORAGE") || category.toUpperCase().includes("WATERSTORAGE");
+        const isPressureTank = category.toUpperCase().includes("PRESSURE TANK") || category.toUpperCase().includes("PRESSURETANK");
   // If Water Storage, just show capacity
   if (isWaterStorage) {
     return (
@@ -280,6 +284,29 @@ if (isWaterHeater) {
         className="p-5 rounded-2xl shadow-lg border border-gray-200 bg-gradient-to-br from-white to-gray-50 hover:shadow-xl transition-shadow duration-300"
         aria-labelledby={`category-${category}`}
       >
+        <h3 id={`category-${category}`} className="text-lg font-semibold text-gray-800 mb-4">
+          {category}
+        </h3>
+        {machines.map((machine) => (
+          <div
+            key={machine.id}
+            className="flex justify-between items-center p-3 bg-white border rounded-lg mb-3"
+          >
+            <span className="font-semibold text-gray-800">{machine.model}</span>
+            <span className="text-gray-600">Capacity: {machine.capacity || "N/A"} L</span>
+          </div>
+        ))}
+      </section>
+    );
+  }
+
+  if (isPressureTank) {
+    return (
+      <section
+        key={category}
+        className="p-5 rounded-2xl shadow-lg border border-gray-200 bg-gradient-to-br from-white to-gray-50 hover:shadow-xl transition-shadow duration-300"
+        aria-labelledby={`category-${category}`}
+        >
         <h3 id={`category-${category}`} className="text-lg font-semibold text-gray-800 mb-4">
           {category}
         </h3>

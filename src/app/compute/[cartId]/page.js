@@ -90,7 +90,6 @@ const isDryer = (cat) => cat.includes("DRYER");
 const isIroner = (cat) => cat.includes("IRONER");
 const isWaterHeater = (cat) =>
   cat.includes("WATER HEATERS") || cat.includes("WATERHEATERS");
-const isWaterStorage = (cat) => cat.includes("WATER STORAGE") || cat.includes("WATERSTORAGE");
 
   const calculateCostPerLoad = useCallback(
     (machine) => {
@@ -357,7 +356,7 @@ acc.waterHeaterGasPerDay += c.waterHeaterGasPerDay || 0;
     const totalWaterLiters = totalWaterUsage * 1000; // convert back to liters for storage calculation
 
     const operatingHours = parseFloat(hour) || 0;
-    const waterStorageUsage = (totalWaterLiters * operatingHours * 0.3)/1000; // assume 30% of daily water usage needs to be stored for peak times
+    const waterStorageUsage = totalWaterLiters * operatingHours * 0.3 // assume 30% of daily water usage needs to be stored for peak times
 
     const perDay = totals.electricity + totals.gas + totalWaterCost;
 
@@ -387,6 +386,8 @@ console.log("Water Storage Tank Usage (m³/day):", waterStorageUsage.toFixed(2))
     };
 
     const totalPerYear = perYear.electricity + perYear.gas + perYear.water;
+
+    const pressureTank = (totalWaterLiters / 5) * 0.3; // assume 30% of daily water usage needs to be stored for peak times, and tank can provide 5 cycles per day
 
   // Pie chart data
   const pieData = useMemo(() => [
@@ -1102,6 +1103,7 @@ const COLORS = {
   </div>
 </div>
           </div>
+<div className="p-4 border rounded bg-yellow-50 shadow-sm grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* Water Storage Section */}
 <div className="flex-1 min-w-[200px]">
   <h3 className="font-medium text-gray-700 mb-2">
@@ -1110,13 +1112,30 @@ const COLORS = {
 
   <div>
     <p className="font-medium text-gray-900">
-      {waterStorageUsage.toFixed(2)} m³/day
+      {waterStorageUsage.toFixed(2)} total L/day
     </p>
     <p className="text-xs text-gray-500">
       Based on total water consumption
     </p>
   </div>
 </div>
+
+  {/*Pressure tank section*/}
+<div className="flex-1 min-w-[200px]">
+  <h3 className="font-medium text-gray-700 mb-2">
+    Pressure Tank Capacity
+  </h3>
+
+  <div>
+    <p className="font-medium text-gray-900">
+      {pressureTank.toFixed(2)} total liters in pressure tank
+    </p>
+    <p className="text-xs text-gray-500">
+      Based on total water consumption and 5 cycles per day
+    </p>
+  </div>
+</div>  
+  </div>          
 
 
       </div>
