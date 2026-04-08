@@ -17,8 +17,6 @@ export default function MachinesLayout({ children }) {
     { href: "/machines/dryer", label: "Dryer" },
     { href: "/machines/ironer", label: "Ironer" },
     { href: "/machines/waterheater", label: "Water Heater" },
-    { href: "/machines/waterStorage", label: "Water Storage"},
-    { href: "/machines/pressureTank", label: "Pressure Tank"},
   ];
 
   return (

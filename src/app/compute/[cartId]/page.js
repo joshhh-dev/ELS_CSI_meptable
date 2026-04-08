@@ -10,7 +10,8 @@ import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis
 } from "recharts";
-import { m } from "framer-motion";
+import { m, useMotionTemplate } from "framer-motion";
+import WaterStoragePage from "@/app/machines/waterStorage/page";
 
 // Currency formatter
 const formatCurrency = (value) =>
@@ -348,20 +349,27 @@ acc.waterHeaterGasPerDay += c.waterHeaterGasPerDay || 0;
       );
     }, [items, calculateCostPerLoad]);
 
-    
+    // Other logic goes here
+    const WATER_TANK_SIZE = [10000, 8000, 5000, 2000, 1000, 700, 500, 340];
+    const PRESSURE_TANK_SIZE = [450, 310, 159, 76, 42, 24]; // in liters, common pressure tank sizes
 
     const totalWaterCost = totals.waterCold + totals.waterHot;
     const totalWaterUsage = totals.rawColdWater + totals.rawHotWater;
 
-    const totalWaterLiters = totalWaterUsage * 1000; // convert back to liters for storage calculation
 
-    const operatingHours = parseFloat(hour) || 0;
-    const waterStorageUsage = totalWaterLiters * operatingHours * 0.3 // assume 30% of daily water usage needs to be stored for peak times
+const totalWaterLiters = useMemo(() => {
+  return (
+    parseFloat(totals.rawColdWater || 0) +
+    parseFloat(totals.rawHotWater || 0)
+  ) * 1000;
+}, [totals]);
+
+
+    const waterStorageUsage = totalWaterLiters * 0.3 // assume 30% of daily water usage needs to be stored for peak times
 
     const perDay = totals.electricity + totals.gas + totalWaterCost;
 
-console.log("Total Water Liters", totalWaterLiters.toFixed(2), "m³/day");
-console.log("Operating Hours", operatingHours);
+console.log("Total Water Liters", parseFloat(totalWaterLiters.toFixed(2)), "m³/day");
 console.log("Water Storage Tank Usage (m³/day):", waterStorageUsage.toFixed(2));
 
     const totalPerDay = {
@@ -389,6 +397,87 @@ console.log("Water Storage Tank Usage (m³/day):", waterStorageUsage.toFixed(2))
 
     const pressureTank = (totalWaterLiters / 5) * 0.3; // assume 30% of daily water usage needs to be stored for peak times, and tank can provide 5 cycles per day
 
+//water tank suggestion
+const suggestTankCombination = (totalLiters) => {
+  if (!totalLiters || totalLiters <= 0) {
+    return { totalTank: 0, tanks: [], exCess: 0 };
+  }
+
+  const sorted = [...WATER_TANK_SIZE].sort((a, b) => b - a);
+  let remaining = totalLiters;
+  const tanks = [];
+
+  for (let size of sorted) {
+    if (remaining <= 0) break;
+
+    const count = Math.floor(remaining / size);
+    if (count > 0) {
+      tanks.push({ size, count });
+      remaining -= size * count;
+    }
+  }
+
+  // If anything remains, add the smallest tank to cover leftover
+  if (remaining > 0) {
+    const smallest = sorted[sorted.length - 1];
+    tanks.push({ size: smallest, count: 1 });
+    remaining -= smallest;
+  }
+
+  const totalTank = tanks.reduce((sum, t) => sum + t.count, 0);
+
+  return {
+    totalTank,
+    tanks,
+    exCess: Math.max(0, -remaining),
+  };
+};
+const smartPressureTankSuggestion = (totalLiters) => {
+  if (!totalLiters || totalLiters <= 0) {
+    return { totalTanks: 0, breakdown: [], excess: 0 };
+  }
+
+  // Sort descending (largest → smallest)
+  const sorted = [...PRESSURE_TANK_SIZE].sort((a, b) => b - a);
+
+  let remaining = totalLiters;
+  const breakdown = [];
+
+  // Pick the first tank that is equal or just larger than totalLiters
+  const suitableTank = sorted.find((size) => size >= totalLiters);
+
+  if (suitableTank) {
+    breakdown.push({ size: suitableTank, count: 1 });
+    remaining -= suitableTank;
+  } else {
+    // If no single tank is enough, use normal greedy approach
+    for (let size of sorted) {
+      const count = Math.floor(remaining / size);
+      if (count > 0) {
+        breakdown.push({ size, count });
+        remaining -= size * count;
+      }
+    }
+    // If anything remains, add smallest tank
+    if (remaining > 0) {
+      const smallest = sorted[sorted.length - 1];
+      breakdown.push({ size: smallest, count: 1 });
+      remaining -= smallest;
+    }
+  }
+
+  const totalTanks = breakdown.reduce((sum, t) => sum + t.count, 0);
+
+  return {
+    totalTanks,
+    breakdown,
+    excess: Math.max(0, -remaining), // extra stored water (should be zero if fully covered)
+  };
+};
+
+const {totalTank, tanks, exCess} = suggestTankCombination(waterStorageUsage);
+const { totalTanks, breakdown, excess } =
+  smartPressureTankSuggestion(pressureTank);
   // Pie chart data
   const pieData = useMemo(() => [
     { name: "Electricity", value: totals.electricity },
@@ -1105,36 +1194,70 @@ const COLORS = {
           </div>
 <div className="p-4 border rounded bg-yellow-50 shadow-sm grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* Water Storage Section */}
-<div className="flex-1 min-w-[200px]">
-  <h3 className="font-medium text-gray-700 mb-2">
-    Water Storage
-  </h3>
+<div className="bg-white p-4 rounded-lg shadow-md">
+  <h2 className="font-semibold text-lg mb-2 text-center">
+    Smart Water Tank Suggestion
+  </h2>
 
-  <div>
-    <p className="font-medium text-gray-900">
-      {waterStorageUsage.toFixed(2)} total L/day
-    </p>
-    <p className="text-xs text-gray-500">
-      Based on total water consumption
-    </p>
+  <p className="text-center text-gray-700">
+    Total Daily Water Usage:{" "}
+    <span className="font-medium">
+      {waterStorageUsage.toFixed(0)} L
+    </span>
+  </p>
+
+  <p className="text-center text-gray-700 mt-2">
+    Recommended Tanks:{" "}
+    <span className="font-bold text-blue-600">
+      {totalTank}
+    </span>
+  </p>
+
+  <div className="mt-2 text-center text-gray-700">
+    {tanks.map((tank, idx) => (
+      <div key={idx}>
+        {tank.count} × {tank.size} L
+      </div>
+    ))}
   </div>
-</div>
+
+  <p className="text-center text-sm text-gray-500 mt-2">
+    Excess Capacity: {exCess.toFixed(0)} L
+  </p>
+</div> 
 
   {/*Pressure tank section*/}
-<div className="flex-1 min-w-[200px]">
-  <h3 className="font-medium text-gray-700 mb-2">
-    Pressure Tank Capacity
-  </h3>
+<div className="bg-white p-4 rounded-lg shadow-md">
+  <h2 className="font-semibold text-lg mb-2 text-center">
+    Smart Pressure Tank Suggestion
+  </h2>
 
-  <div>
-    <p className="font-medium text-gray-900">
-      {pressureTank.toFixed(2)} total liters in pressure tank
-    </p>
-    <p className="text-xs text-gray-500">
-      Based on total water consumption and 5 cycles per day
-    </p>
+  <p className="text-center text-gray-700">
+    Total Daily Water Usage:{" "}
+    <span className="font-medium">
+      {pressureTank.toFixed(0)} L
+    </span>
+  </p>
+
+  <p className="text-center text-gray-700 mt-2">
+    Recommended Tanks:{" "}
+    <span className="font-bold text-blue-600">
+      {totalTanks}
+    </span>
+  </p>
+
+  <div className="mt-2 text-center text-gray-700">
+    {breakdown.map((tank, idx) => (
+      <div key={idx}>
+        {tank.count} × {tank.size} L
+      </div>
+    ))}
   </div>
-</div>  
+
+  <p className="text-center text-sm text-gray-500 mt-2">
+    Excess Capacity: {excess.toFixed(0)} L
+  </p>
+</div> 
   </div>          
 
 
