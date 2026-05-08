@@ -281,7 +281,7 @@ if (isWaterHeater) {
     return (
       <section
         key={category}
-        className="p-5 rounded-2xl shadow-lg border border-gray-200 bg-gradient-to-br from-white to-gray-50 hover:shadow-xl transition-shadow duration-300"
+        className="p-5 rounded-2xl shadow-lg border border-gray-200 bg-gradient-to-br from-white to-gray-50 transition-shadow duration-300"
         aria-labelledby={`category-${category}`}
       >
         <h3 id={`category-${category}`} className="text-lg font-semibold text-gray-800 mb-4">
@@ -304,7 +304,7 @@ if (isWaterHeater) {
     return (
       <section
         key={category}
-        className="p-5 rounded-2xl shadow-lg border border-gray-200 bg-gradient-to-br from-white to-gray-50 hover:shadow-xl transition-shadow duration-300"
+        className="p-5 rounded-2xl shadow-lg border border-gray-200 bg-gradient-to-br from-white to-gray-50 transition-shadow duration-300"
         aria-labelledby={`category-${category}`}
         >
         <h3 id={`category-${category}`} className="text-lg font-semibold text-gray-800 mb-4">
@@ -325,7 +325,7 @@ if (isWaterHeater) {
         return (
           <section
             key={category}
-            className="p-5 rounded-2xl shadow-lg border border-gray-200 bg-gradient-to-br from-white to-gray-50 hover:shadow-xl transition-shadow duration-300"
+            className="p-5 rounded-2xl shadow-lg border border-gray-200 bg-gradient-to-br from-white to-gray-50 transition-shadow duration-300"
             aria-labelledby={`category-${category}`}
           >
             <h3 id={`category-${category}`} className="text-lg font-semibold text-gray-800 mb-4">
@@ -429,7 +429,7 @@ if (isWaterHeater) {
               return (
                 <article
                   key={machine.id || `${category}-${machine.model}-${idx}`}
-                  className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 bg-white border rounded-xl shadow-sm mb-3 hover:shadow-md transition"
+                  className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 bg-white border rounded-xl shadow-sm mb-3 transition"
                   aria-label={`${machine.model} machine details`}
                 >
                   <div className="flex-1">
@@ -456,15 +456,11 @@ if (isWaterHeater) {
                       )}
                       {isDryer && (
                         <>
-                          <p className="font-semibold text-blue-600">Gas KGS/HR: {cost.dryerGasKgPerHour?.toFixed(3)} kg/hr</p>
                           <p className="font-semibold text-blue-600">Gas KGS per Load: {cost.dryerGasKgPerLoad?.toFixed(3)} kg</p>
-                          <p className="font-semibold text-blue-600">LPG Cost per Load: {formatCurrency(cost.dryerGasKgPerLoad * lpgCostPerKg)}</p>
-                          <p className="text-xs text-gray-500">(Based on ₱{lpgCostPerKg}/kg)</p>
                         </>
                       )}
                       {isIroner && (
                         <>
-                          <p className="font-semibold text-green-600">Gas KGS/HR: {cost.ironerGasKgPerHour?.toFixed(3)} kg/hr</p>
                           <p className="font-semibold text-green-600">Gas KGS per Load: {cost.ironerGasKgPerLoad?.toFixed(3)} kg</p>
                           <p className="font-semibold text-green-600">LPG Cost per Load: {formatCurrency((cost.ironerGasKgPerLoad / (machine.quantity || 1)) * (parseFloat(machineRates.gas) || 80))}</p>
                           <p className="text-xs text-gray-500">(Based on ₱{parseFloat(machineRates.gas) || 80}/kg)</p>
@@ -472,13 +468,12 @@ if (isWaterHeater) {
                       )}
                       {isWaterHeater && (
                         <>
-                          <p className="font-semibold text-teal-600">Gas KGS/HR: {cost.waterHeaterGasKgPerHour?.toFixed(3)} kg/hr</p>
                           <p className="font-semibold text-teal-600">Gas KGS per Load: {cost.waterHeaterGasKgPerLoad?.toFixed(3)} kg</p>
                           <p className="font-semibold text-teal-600">LPG Cost per Load: {formatCurrency(cost.waterHeaterGasKgPerLoad * lpgCostPerKg)}</p>
                           <p className="text-xs text-gray-500">(Based on ₱{lpgCostPerKg}/kg)</p>
                         </>
                       )}
-                      {(isDryer || isIroner || isWaterHeater) && (
+                      {(isDryer || isWaterHeater) && (
                         <p>Gas Cost per Load: {formatCurrency(cost.gas)}</p>
                       )}
                     </div>

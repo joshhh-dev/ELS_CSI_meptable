@@ -69,8 +69,7 @@ export default function ComputationPage() {
               >
                 <div className="flex justify-between items-start">
                   <h2 className="font-semibold mb-2">
-                    Cart ID: {cart.id} |{" "}
-                    {new Date(cart.timestamp).toLocaleString()}
+                    Computation Details | {new Date(cart.timestamp).toLocaleString()}
                   </h2>
                   <motion.button
                     whileHover={{ scale: 1.1 }}

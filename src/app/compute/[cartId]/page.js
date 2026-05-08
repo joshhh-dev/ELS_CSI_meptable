@@ -10,8 +10,10 @@ import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis
 } from "recharts";
+import { Sector } from "recharts";
 import { m, useMotionTemplate } from "framer-motion";
 import WaterStoragePage from "@/app/machines/waterStorage/page";
+import { Pointer } from "lucide-react";
 
 // Currency formatter
 const formatCurrency = (value) =>
@@ -58,6 +60,8 @@ export default function CartDetailPage() {
   const [hour, setHour] = useState(0);
   const [loading, setLoading] = useState(false);
   const [categoryRates, setCategoryRates] = useState({});
+
+  const [activeIndex, setActiveIndex] = useState(null);
 
   //toggle state: "Usage" or "currency"
   const [viewMode, setViewMode] = useState("usage");
@@ -939,12 +943,52 @@ const COLORS = {
               cx="50%"
               cy="50%"
               outerRadius={100}
+              activeIndex={activeIndex}
+  activeShape={(props) => {
+    // 👇 makes active slice bigger
+    return <Sector {...props} outerRadius={110} />;
+  }}
+  onClick={(_, index) => setActiveIndex(index)}
+
               label={({ name, value, percent }) =>
                 viewMode === "currency"
                   ? `${name}: ${formatCurrency(value)} (${(percent * 100).toFixed(1)}%)`
                   : `${name}: ${value.toFixed(2)} (${(percent * 100).toFixed(1)}%)`
               }
-            />
+            >
+                {(
+    viewMode === "currency"
+      ? [
+          { fill: COLORS.currency.electricity },
+          { fill: COLORS.currency.gas },
+          { fill: COLORS.currency.waterCold },
+          { fill: COLORS.currency.waterHot },
+        ]
+      : [
+          { fill: COLORS.usage.electricity },
+          { fill: COLORS.usage.gasWasher },
+          { fill: COLORS.usage.gasDryer },
+          { fill: COLORS.usage.gasIroner },
+          ...(totals.rawGasWaterHeater > 0 ? [{ fill: COLORS.usage.gasWaterHeater || "#10b981" }] : []),
+          { fill: COLORS.usage.waterCold },
+          { fill: COLORS.usage.waterHot },
+        ]
+  ).map((entry, index) => (
+    <Cell
+      key={index}
+      fill={entry.fill}
+      cursor="pointer"
+      opacity={
+        activeIndex === null
+          ? 1
+          : index === activeIndex
+          ? 1     // selected = full
+          : 0.3   // others fade
+      }
+
+    />
+  ))}
+</Pie>
 
               <Tooltip
                 formatter={(value) =>
