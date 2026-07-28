@@ -1,5 +1,7 @@
 "use client";
 import { useMemo } from "react";
+import Image from "next/image";
+import { COLORS } from "./chartColors";
 
 // Helper to group items by category
 const groupItemsByCategory = (items) =>
@@ -399,6 +401,7 @@ if (isWaterHeater) {
                       id={`${rateKey}-${key}`}
                       type="number"
                       step="0.01"
+                      placeholder="0.00"
                       value={categoryRates[rateKey]?.[key] ?? ""}
                       onChange={handleRateChange(rateKey, key)}
                       onBlur={handleRateBlur(rateKey, key)}
@@ -414,6 +417,12 @@ if (isWaterHeater) {
               })}
             </div>
 
+            {utilities.some((key) => categoryRates[rateKey]?.[key] === undefined || categoryRates[rateKey]?.[key] === "") && (
+              <p className="text-xs text-amber-600 -mt-4 mb-6">
+                ⚠ Enter the rate(s) above — cost per load shows ₱0.00 until a rate is set.
+              </p>
+            )}
+
             {/* Machine List */}
             {machines.map((machine, idx) => {
               const cost = calculateCostPerLoad(machine);
@@ -425,96 +434,168 @@ if (isWaterHeater) {
 
               const machineRates = categoryRates[rateKey] || {};
 
+              // Build the cost lines shown in the grid below, tagged with the
+              // same colors used in the pie/bar charts so a user can match a
+              // card line to a chart slice by color, not just text.
+              const costLines = [
+                {
+                  label: "Electricity Cost per Day",
+                  value: formatCurrency(cost.electricity),
+                  color: COLORS.currency.electricity,
+                },
+              ];
+              if (isWasher) {
+                costLines.push(
+                  {
+                    label: "Cold Water Cost per Load",
+                    value: formatCurrency(cost.waterCold),
+                    color: COLORS.currency.waterCold,
+                  },
+                  {
+                    label: "Hot Water Cost per Load",
+                    value: formatCurrency(cost.waterHot),
+                    color: COLORS.currency.waterHot,
+                  }
+                );
+              }
+              if (isDryer) {
+                costLines.push({
+                  label: "Gas KGS per Load",
+                  value: `${cost.dryerGasKgPerLoad?.toFixed(3)} kg`,
+                  color: COLORS.currency.gas,
+                });
+              }
+              if (isIroner) {
+                costLines.push(
+                  {
+                    label: "Gas KGS per Load",
+                    value: `${cost.ironerGasKgPerLoad?.toFixed(3)} kg`,
+                    color: COLORS.currency.gas,
+                  },
+                  {
+                    label: "LPG Cost per Load",
+                    value: formatCurrency(
+                      (cost.ironerGasKgPerLoad / (machine.quantity || 1)) *
+                        (parseFloat(machineRates.gas) || 80)
+                    ),
+                    note: `Based on ₱${parseFloat(machineRates.gas) || 80}/kg`,
+                    color: COLORS.currency.gas,
+                  }
+                );
+              }
+              if (isWaterHeater) {
+                costLines.push(
+                  {
+                    label: "Gas KGS per Load",
+                    value: `${cost.waterHeaterGasKgPerLoad?.toFixed(3)} kg`,
+                    color: COLORS.currency.gas,
+                  },
+                  {
+                    label: "LPG Cost per Load",
+                    value: formatCurrency(cost.waterHeaterGasKgPerLoad * lpgCostPerKg),
+                    note: `Based on ₱${lpgCostPerKg}/kg`,
+                    color: COLORS.currency.gas,
+                  }
+                );
+              }
+              if (isDryer || isWaterHeater) {
+                costLines.push({
+                  label: "Gas Cost per Load",
+                  value: formatCurrency(cost.gas),
+                  color: COLORS.currency.gas,
+                });
+              }
+
               return (
                 <article
                   key={machine.id || `${category}-${machine.model}-${idx}`}
-                  className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 bg-white border rounded-xl shadow-sm mb-3 transition"
+                  className="p-4 bg-white border rounded-xl shadow-sm mb-3 transition"
                   aria-label={`${machine.model} machine details`}
                 >
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-800">{machine.model}</p>
-                    <p className="text-sm text-gray-500 mb-2">
-                      Elec: {machine.totalLoad || 0} kWh
-                      {isWasher && (
-                        <>
-                          , Hot: {machine.hotWater?.waterConsump || 0} L
-                          , Cold: {machine.coldWater?.waterConsump || 0} L
-                        </>
-                      )}
-                      {(isDryer || isIroner || isWaterHeater) && `, Gas: ${machine.gas?.btuConsumption || machine.gasBTU || 0} BTU`}
-                    </p>
-
-                    {/* Display per-machine cost */}
-                    <div className="mt-1 text-sm text-gray-700 space-y-1">
-                      <p>Electricity Cost per Load: {formatCurrency(cost.electricity)}</p>
-                      {isWasher && (
-                        <>
-                          <p>Cold Water Cost per Load: {formatCurrency(cost.waterCold)}</p>
-                          <p>Hot Water Cost per Load: {formatCurrency(cost.waterHot)}</p>
-                        </>
-                      )}
-                      {isDryer && (
-                        <>
-                          <p className="font-semibold text-blue-600">Gas KGS per Load: {cost.dryerGasKgPerLoad?.toFixed(3)} kg</p>
-                        </>
-                      )}
-                      {isIroner && (
-                        <>
-                          <p className="font-semibold text-green-600">Gas KGS per Load: {cost.ironerGasKgPerLoad?.toFixed(3)} kg</p>
-                          <p className="font-semibold text-green-600">LPG Cost per Load: {formatCurrency((cost.ironerGasKgPerLoad / (machine.quantity || 1)) * (parseFloat(machineRates.gas) || 80))}</p>
-                          <p className="text-xs text-gray-500">(Based on ₱{parseFloat(machineRates.gas) || 80}/kg)</p>
-                        </>
-                      )}
-                      {isWaterHeater && (
-                        <>
-                          <p className="font-semibold text-teal-600">Gas KGS per Load: {cost.waterHeaterGasKgPerLoad?.toFixed(3)} kg</p>
-                          <p className="font-semibold text-teal-600">LPG Cost per Load: {formatCurrency(cost.waterHeaterGasKgPerLoad * lpgCostPerKg)}</p>
-                          <p className="text-xs text-gray-500">(Based on ₱{lpgCostPerKg}/kg)</p>
-                        </>
-                      )}
-                      {(isDryer || isWaterHeater) && (
-                        <p>Gas Cost per Load: {formatCurrency(cost.gas)}</p>
-                      )}
+                  <div className="flex items-start gap-3">
+                    <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                      <Image
+                        src={machine.imageUrl || "/placeholder.png"}
+                        alt={machine.model || "Machine image"}
+                        fill
+                        className="object-contain"
+                      />
                     </div>
-                  </div>
 
-                  <div className="flex items-center space-x-2 mt-3 md:mt-0">
-                    <label htmlFor={`quantity-${machine.id}`} className="sr-only">
-                      Quantity for {machine.model}
-                    </label>
-                    <input
-                      id={`quantity-${machine.id}`}
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={machine.quantity ?? ""}   // allow empty string
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        // let it be empty while typing
-                        if (val === "") {
-                          updateQuantity(machine.id, "");
-                        } else {
-                          updateQuantity(machine.id, Math.max(0, parseInt(val, 10) || 0));
-                        }
-                      }}
-                      onBlur={(e) => {
-                        // enforce minimum 1 only when leaving the field
-                        if (e.target.value === "" || e.target.value === "0") {
-                          updateQuantity(machine.id, 1);
-                        }
-                      }}
-                      className="w-16 text-center rounded-lg border-gray-300 shadow-sm
-                                focus:border-indigo-500 focus:ring focus:ring-indigo-200 px-2 py-1"
-                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-semibold text-gray-800">{machine.model}</p>
+                        <button
+                          onClick={() => removeMachine(machine.id)}
+                          className="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition flex-shrink-0"
+                          aria-label={`Remove machine ${machine.model}`}
+                          type="button"
+                        >
+                          🗑
+                        </button>
+                      </div>
 
-                    <button
-                      onClick={() => removeMachine(machine.id)}
-                      className="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition"
-                      aria-label={`Remove machine ${machine.model}`}
-                      type="button"
-                    >
-                      🗑
-                    </button>
+                      <p className="text-sm text-gray-500 mb-2">
+                        Elec: {machine.totalLoad || 0} kWh
+                        {isWasher && (
+                          <>
+                            , Hot: {machine.hotWater?.waterConsump || 0} L
+                            , Cold: {machine.coldWater?.waterConsump || 0} L
+                          </>
+                        )}
+                        {(isDryer || isIroner || isWaterHeater) && `, Gas: ${machine.gas?.btuConsumption || machine.gasBTU || 0} BTU`}
+                      </p>
+
+                      {/* Display per-machine cost */}
+                      <div className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-3 mt-2">
+                        {costLines.map((line, i) => (
+                          <div key={i}>
+                            <p className="text-xs font-medium text-gray-600 flex items-center gap-1">
+                              <span
+                                className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                                style={{ background: line.color }}
+                              />
+                              {line.label}
+                            </p>
+                            <p className="font-semibold text-gray-900">{line.value}</p>
+                            {line.note && (
+                              <p className="text-[10px] text-gray-400">{line.note}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2 mt-3">
+                        <span className="text-xs text-gray-500">Qty</span>
+                        <label htmlFor={`quantity-${machine.id}`} className="sr-only">
+                          Quantity for {machine.model}
+                        </label>
+                        <input
+                          id={`quantity-${machine.id}`}
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={machine.quantity ?? ""}   // allow empty string
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            // let it be empty while typing
+                            if (val === "") {
+                              updateQuantity(machine.id, "");
+                            } else {
+                              updateQuantity(machine.id, Math.max(0, parseInt(val, 10) || 0));
+                            }
+                          }}
+                          onBlur={(e) => {
+                            // enforce minimum 1 only when leaving the field
+                            if (e.target.value === "" || e.target.value === "0") {
+                              updateQuantity(machine.id, 1);
+                            }
+                          }}
+                          className="w-16 text-center rounded-lg border-gray-300 shadow-sm
+                                    focus:border-indigo-500 focus:ring focus:ring-indigo-200 px-2 py-1"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </article>
               );

@@ -8,12 +8,13 @@ import UserRatesInput from "./UserRatesInput";
 import toast, { Toaster } from "react-hot-toast";
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis
+  BarChart, Bar, XAxis, YAxis, Curve
 } from "recharts";
 import { Sector } from "recharts";
 import { m, useMotionTemplate } from "framer-motion";
 import WaterStoragePage from "@/app/machines/waterStorage/page";
 import { Pointer } from "lucide-react";
+import { COLORS } from "./chartColors";
 
 // Currency formatter
 const formatCurrency = (value) =>
@@ -45,9 +46,6 @@ const getGasKgPerHour = (btu = 0) =>
  */
 const getGasKgPerLoad = (btuPerHr = 0, hoursPerLoad = TIME_LOAD) =>
   getGasKgPerHour(btuPerHr) * hoursPerLoad;
-
-
-const COLORS = ["#4f46e5", "#f97316", "#0ea5e9", "#f43f5e"];
 
 export default function CartDetailPage() {
   const { user } = useAuth(); 
@@ -809,22 +807,6 @@ Object.keys(ws).forEach((cellAddr) => {
       <div key={i} className="h-6 w-full bg-gray-200 rounded"></div>
     ))}
   </div>;
-const COLORS = {
-  currency: {
-    electricity: "#4f46e5", // Indigo
-    gas: "#f97316",         // Orange
-    waterCold: "#0284c7",   // Dark Blue
-    waterHot: "#b91c1c",    // Dark Red
-  },
-  usage: {
-    electricity: "#6366f1", // Lighter Indigo
-    gasWasher: "#facc15",   // Yellow
-    gasDryer: "#84cc16",    // Lime
-    gasIroner: "#22c55e",   // Green
-    waterCold: "#38bdf8",   // Light Blue
-    waterHot: "#ef4444",    // Light Red
-  }
-};
 
   return (
     <div className="p-5 rounded-2xl shadow-lg border border-gray-200 bg-gradient-to-br from-white to-gray-50 hover:shadow-xl transition-shadow duration-300">
@@ -949,11 +931,17 @@ const COLORS = {
   }}
   onClick={(_, index) => setActiveIndex(index)}
 
-              label={({ name, value, percent }) =>
-                viewMode === "currency"
+              label={({ name, value, percent }) => {
+                if (!value) return null; // avoid overlapping labels for 0-value slices
+                return viewMode === "currency"
                   ? `${name}: ${formatCurrency(value)} (${(percent * 100).toFixed(1)}%)`
-                  : `${name}: ${value.toFixed(2)} (${(percent * 100).toFixed(1)}%)`
-              }
+                  : `${name}: ${value.toFixed(2)} (${(percent * 100).toFixed(1)}%)`;
+              }}
+              labelLine={(lineProps) => {
+                if (!lineProps.value) return null; // no leader line for 0-value slices
+                const { key, ...rest } = lineProps;
+                return <Curve {...rest} type="linear" className="recharts-pie-label-line" />;
+              }}
             >
                 {(
     viewMode === "currency"

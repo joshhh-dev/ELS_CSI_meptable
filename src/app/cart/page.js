@@ -14,7 +14,7 @@ export default function CartPage() {
 
   const finalizeCart = async () => {
     if (!user) {
-      alert("You must be logged in to finalize your cart.");
+      toast.error("You must be logged in to finalize your cart.");
       router.push("/login");
       return;
     }
@@ -35,11 +35,19 @@ export default function CartPage() {
       });
 
       clearCart();
-      alert("✅ Cart finalized and stored in Realtime Database!");
+      toast.success("Cart finalized and stored in Realtime Database! ✅");
       router.push(`/compute/${newCartRef.key}`);
     } catch (error) {
       console.error("❌ Failed to finalize cart:", error);
-      alert("Failed to save cart. Check Firebase connection.");
+      toast.error("Failed to save cart. Check Firebase connection. ❌");
+    }
+  };
+
+  const handleClearCart = () => {
+    if (cart.length === 0) return;
+    if (window.confirm("Clear all machines from your cart? This cannot be undone.")) {
+      clearCart();
+      toast.success("Cart cleared");
     }
   };
 
@@ -62,6 +70,7 @@ export default function CartPage() {
                 <button
                   onClick={() => removeFromCart(item.id)}
                   className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
+                  aria-label={`Decrease quantity of ${item.model}`}
                 >
                   ➖
                 </button>
@@ -72,11 +81,13 @@ export default function CartPage() {
                   value={item.quantity}
                   onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 1)}
                   className="w-16 text-center border rounded px-2 py-1"
+                  aria-label={`Quantity of ${item.model}`}
                 />
 
                 <button
                   onClick={() => addToCart(item)}
                   className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+                  aria-label={`Increase quantity of ${item.model}`}
                 >
                   ➕
                 </button>
@@ -84,6 +95,7 @@ export default function CartPage() {
                 <button
                   onClick={() => removeAllFromCart(item.id)}
                   className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                  aria-label={`Remove ${item.model} from cart`}
                 >
                   🗑 Remove
                 </button>
@@ -96,7 +108,7 @@ export default function CartPage() {
               Total Machines: {cart.reduce((sum, item) => sum + item.quantity, 0)}
             </p>
             <button
-              onClick={clearCart}
+              onClick={handleClearCart}
               className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800"
             >
               Clear Cart
