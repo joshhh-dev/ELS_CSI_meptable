@@ -5,6 +5,7 @@ import { rtdb } from "../lib/firebase";
 import { ref, push, set } from "firebase/database";
 import { useAuth } from "../context/AuthContext"; // ✅ import auth
 import MachinesLayout from "../machines/layout";
+import { toast } from "react-toastify";
 
 export default function CartPage() {
   const { cart, removeFromCart, removeAllFromCart, clearCart, addToCart, updateQuantity } = useCart();
