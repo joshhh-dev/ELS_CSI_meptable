@@ -30,8 +30,10 @@ export default function WaterHeaterMachinePage() {
           where("model", "==", decodedId)
         );
         const snap = await getDocs(ref);
-        if (!snap.empty) setMachine(snap.docs[0].data());
-        else setMachine(null);
+        if (!snap.empty) {
+          const docSnap = snap.docs[0];
+          setMachine({ id: docSnap.id, category: "WATER HEATERS", ...docSnap.data() });
+        } else setMachine(null);
       } catch (err) {
         console.error("Error loading water heater:", err);
         setMachine(null);

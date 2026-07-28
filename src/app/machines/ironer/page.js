@@ -20,6 +20,7 @@ export default function IronersPage() {
         const querySnapshot = await getDocs(collection(db, "mep_ironers"));
         const items = querySnapshot.docs.map((doc) => ({
           id: doc.id,
+          category: "IRONERS",
           ...doc.data(),
         }));
         setIroners(items);

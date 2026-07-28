@@ -20,6 +20,7 @@ export default function WaterHeaterPage() {
         const querySnapshot = await getDocs(collection(db, "mep_waterHeater"));
         const items = querySnapshot.docs.map((doc) => ({
           id: doc.id,
+          category: "WATER HEATERS",
           ...doc.data(),
         }));
         setWaterHeaters(items);

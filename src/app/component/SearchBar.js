@@ -13,6 +13,13 @@ const collections = {
   mep_waterHeater: "waterheater",
 };
 
+const defaultCategories = {
+  mep_washer: "WASHER",
+  mep_dryers: "TUMBLE DRYER",
+  mep_ironers: "IRONERS",
+  mep_waterHeater: "WATER HEATERS",
+};
+
 export default function SearchBar() {
   const [search, setSearch] = useState("");
   const [results, setResults] = useState([]);
@@ -34,7 +41,12 @@ export default function SearchBar() {
       for (const colKey of Object.keys(collections)) {
         const querySnapshot = await getDocs(collection(db, colKey));
         querySnapshot.forEach((docSnap) => {
-          const data = { id: docSnap.id, ...docSnap.data(), collection: colKey };
+          const data = {
+            id: docSnap.id,
+            category: defaultCategories[colKey],
+            ...docSnap.data(),
+            collection: colKey,
+          };
           if (data.model?.toLowerCase().includes(search.toLowerCase())) {
             allResults.push(data);
           }

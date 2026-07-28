@@ -19,6 +19,7 @@ export default function WaterStoragePage() {
                 const querySnapshot = await getDocs(collection(db, "mep_waterStorage"));
                 const items = querySnapshot.docs.map((doc) => ({
                     id: doc.id,
+                    category: "WATER STORAGE",
                     ...doc.data(),
                 }));
                 setWaterStorages(items);    

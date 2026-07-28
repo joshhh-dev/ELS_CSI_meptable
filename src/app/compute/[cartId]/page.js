@@ -137,9 +137,8 @@ const operatingHours =
 
 
       // Electricity: KW TOTAL = KW per machine × quantity
-      // Use aveElecConsump instead of totalLoad for electricity calculation
 // Electricity
-const kwPerMachine = parseFloat(machine.aveElecConsump) || 0; // kW per machine per hour
+const kwPerMachine = parseFloat(machine.totalLoad) || 0; // kW per machine per hour
 const kwTotal = kwPerMachine * qty; // kW for all machines of this type
 
 const operatingHoursSafe = parseFloat(operatingHours) || 0;
@@ -1076,12 +1075,12 @@ const COLORS = {
                     {/* Detailed breakdown per machine */}
                     <div className="mt-2 pt-2 border-t border-gray-200 text-xs">
                       <p className="text-gray-600 font-semibold mb-1">Breakdown:</p>
-                      {items.map((m) => {
-                        const kwPerMachine = parseFloat(m.aveElecConsump) || 0;
+                      {items.map((m, idx) => {
+                        const kwPerMachine = parseFloat(m.totalLoad) || 0;
                         const qty = m.quantity || 0;
                         const kwTotal = kwPerMachine * qty;
                         return (
-                          <p key={m.id} className="text-gray-500">
+                          <p key={m.id || `${m.model}-${idx}`} className="text-gray-500">
                             {m.model}: {kwPerMachine.toFixed(2)} kW × {qty} = <strong>{kwTotal.toFixed(2)} kW</strong>
                           </p>
                         );
