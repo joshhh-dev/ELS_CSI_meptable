@@ -19,6 +19,7 @@ export default function PressureTankPage() {
                 const querySnapshot = await getDocs(collection(db, "mep_pressureTank"));
                 const items = querySnapshot.docs.map((doc) => ({
                     id: doc.id,
+                    category: "PRESSURE TANK",
                     ...doc.data(),
                 }));
                 setPressureTanks(items);    

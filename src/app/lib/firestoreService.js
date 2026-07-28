@@ -4,10 +4,11 @@ import {db} from "./firebase";
 export const fetchMachine = async () => {
     try {
     const querySnapshot = await getDocs(collection(db, "mep_washer"));
-    const washers = querySnapshot.docs.map((doc) => ({ 
-        id: doc.id, 
-        ...doc.data() 
-    }));    
+    const washers = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        category: "WASHER",
+        ...doc.data()
+    }));
     return washers;
 
     } catch (error) {

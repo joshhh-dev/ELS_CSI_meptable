@@ -163,7 +163,7 @@ export default function UserRatesInput({ categoryRates, setCategoryRates, items,
     const qty = machine.quantity || 0;
     if (!qty || !hour) return { electricity: 0, waterCold: 0, waterHot: 0, gas: 0 };
 
-    const catUpper = machine.category.toUpperCase();
+    const catUpper = normalizeCategory(machine.category);
     const ratesKey = getRateKey(machine.category);
     const rates = categoryRates[ratesKey] || {};
 
@@ -179,8 +179,7 @@ const isWaterHeater = isWaterHeaterCat(catUpper);
     hour;
   
     // Electricity: KW TOTAL = KW per machine × quantity
-    // Use aveElecConsump instead of totalLoad for electricity calculation
-    const kwPerMachine = parseFloat(machine.aveElecConsump) || 0;
+    const kwPerMachine = parseFloat(machine.totalLoad) || 0;
     const kwTotal = kwPerMachine * qty; // Total KW = KW × QTY
     // Calculate electricity per day for cost calculation = KW TOTAL × operating hours
     const electricUsagePerDay = kwTotal * operatingHours;
@@ -287,9 +286,9 @@ if (isWaterHeater) {
         <h3 id={`category-${category}`} className="text-lg font-semibold text-gray-800 mb-4">
           {category}
         </h3>
-        {machines.map((machine) => (
+        {machines.map((machine, idx) => (
           <div
-            key={machine.id}
+            key={machine.id || `${category}-${machine.model}-${idx}`}
             className="flex justify-between items-center p-3 bg-white border rounded-lg mb-3"
           >
             <span className="font-semibold text-gray-800">{machine.model}</span>
@@ -310,9 +309,9 @@ if (isWaterHeater) {
         <h3 id={`category-${category}`} className="text-lg font-semibold text-gray-800 mb-4">
           {category}
         </h3>
-        {machines.map((machine) => (
+        {machines.map((machine, idx) => (
           <div
-            key={machine.id}
+            key={machine.id || `${category}-${machine.model}-${idx}`}
             className="flex justify-between items-center p-3 bg-white border rounded-lg mb-3"
           >
             <span className="font-semibold text-gray-800">{machine.model}</span>
@@ -435,7 +434,7 @@ if (isWaterHeater) {
                   <div className="flex-1">
                     <p className="font-semibold text-gray-800">{machine.model}</p>
                     <p className="text-sm text-gray-500 mb-2">
-                      Elec: {machine.aveElecConsump || 0} kWh
+                      Elec: {machine.totalLoad || 0} kWh
                       {isWasher && (
                         <>
                           , Hot: {machine.hotWater?.waterConsump || 0} L

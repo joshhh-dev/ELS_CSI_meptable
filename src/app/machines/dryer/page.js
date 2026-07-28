@@ -20,6 +20,7 @@ export default function DryerPage() {
         const querySnapshot = await getDocs(collection(db, "mep_dryers"));
         const data = querySnapshot.docs.map((doc) => ({
           id: doc.id,
+          category: "TUMBLE DRYER",
           ...doc.data(),
         }));
         setDryers(data);
